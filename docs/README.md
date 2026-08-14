@@ -17,12 +17,12 @@ L'application **StoreManager Pro** centralise et fiabilise les opérations quoti
 
 ---
 
-## 📑 Sommaire des Livrables de Conception
+## 📑 Sommaire des Livrables de Conception (PlantUML)
 
-| Document | Format Markdown | Source PlantUML | Description |
-| :--- | :---: | :---: | :--- |
-| **Diagramme de Cas d'Utilisation** | [use_cases.md](file:///home/ichigo/Bureau/ODC-PROJETS/PHP/POO/storeManager/docs/use_cases.md) | [use_cases.puml](file:///home/ichigo/Bureau/ODC-PROJETS/PHP/POO/storeManager/docs/use_cases.puml) | Modélisation des 4 profils utilisateurs, use cases, inclusions (`<<include>>`), extensions (`<<extend>>`) et matrice RBAC |
-| **Diagramme de Classes POO** | [diagramme_classes.md](file:///home/ichigo/Bureau/ODC-PROJETS/PHP/POO/storeManager/docs/diagramme_classes.md) | [diagramme_classes.puml](file:///home/ichigo/Bureau/ODC-PROJETS/PHP/POO/storeManager/docs/diagramme_classes.puml) | Modélisation complète des entités métier, propriétés typées, méthodes avec logique métier, cardinalités et associations |
+| Document | Source PlantUML | Description |
+| :--- | :---: | :--- |
+| **Diagramme de Cas d'Utilisation** | [use_cases.puml](file:///home/ichigo/Bureau/ODC-PROJETS/PHP/POO/storeManager/docs/use_cases.puml) | Modélisation des interactions des 4 profils métiers (*Admin*, *Vente*, *Stock*, *Inventaire*), packages fonctionnels, inclusions (`<<include>>`) et extensions (`<<extend>>`). |
+| **Diagramme de Classes 100% POO** | [diagramme_classes.puml](file:///home/ichigo/Bureau/ODC-PROJETS/PHP/POO/storeManager/docs/diagramme_classes.puml) | Modélisation complète en classes pures des entités métier (`Produit`, `Client`, `Fournisseur`, `Vente`, `Dette`, `Paiement`, `Approvisionnement`, `User`), classes de référence (`Role`, `StatutDette`, `ModePaiement`, `StatutAppro`, `Categorie`), méthodes métier et associations. |
 
 ---
 
@@ -66,4 +66,4 @@ L'application **StoreManager Pro** centralise et fiabilise les opérations quoti
 | **👑 Admin Boutique** | ✅ Lecture / Écriture | ✅ Lecture / Écriture | ✅ Lecture / Écriture | ✅ Lecture / Écriture | ✅ Accès Total |
 | **🛒 Chargé de Vente** | ✅ Caisse & Ventes | ✅ Encaissement dettes | ❌ Pas d'accès | 👁️ Lecture Clients | ❌ Pas d'accès |
 | **📦 Chargé de Stock** | ❌ Pas d'accès | ❌ Pas d'accès | ✅ Réception BL | ✅ Produits / Fournisseurs | ❌ Pas d'accès |
-| **📋 Inventaire** | ❌ Pas d'accès | ❌ Pas d'accès | ❌ Pas d'accès | 👁️ Comptage / Consultation | ❌ Pas d'accès |
+| **📋 Inventaire** | ❌ Pas d'accès | ❌ Pas d'accès | ❌ Pas d'accès | ✅ Lecture / Écriture | ❌ Pas d'accès |
