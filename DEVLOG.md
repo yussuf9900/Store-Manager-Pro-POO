@@ -7,20 +7,171 @@
 ## 1. Suivi Chronologique des Phases
 
 ### 🌃 [Vendredi - Phase 1] : Conception & BDD Fallback
-- **Heure de réalisation** : 19h00 - 22h00 (Step 1.1 Conception UML & Step 1.2 Schéma BDD)
-- **Ce qui a été fait** : 
-  - **Conception UML (Step 1.1)** :
-    - **Analyse du domaine & matrice des rôles** : Définition précise des 4 profils utilisateurs (*Admin Boutique*, *Chargé de Vente*, *Chargé de Stock*, *Inventaire*) et cartographie de leurs prérogatives sur les modules POS, Dettes, Approvisionnements et Catalogue.
-    - **Diagramme de Cas d'Utilisation (Use Cases)** : Modélisation sous format PlantUML natif (`docs/use_cases.puml`) des interactions acteurs/système, structuration par packages métier, identification des relations `<<include>>` (gestion panier, décrémentation stock, mise à jour solde dette) et `<<extend>>` (contrôle du plafond de crédit pour la vente à crédit).
-    - **Diagramme de Classes 100% POO Pure** : Modélisation complète sous format PlantUML natif (`docs/diagramme_classes.puml`) en classes pures (sans `enum`, avec modélisation des classes référentielles `Role`, `StatutDette`, `ModePaiement`, `StatutAppro`, `Categorie`), de toutes les entités métier (`User`, `Produit`, `Client`, `Fournisseur`, `Vente`, `LigneVente`, `Dette`, `Paiement`, `Approvisionnement`, `LigneApprovisionnement`), de leurs attributs typés PHP 8, de leurs méthodes métier encapsulées (`peutPrendreCredit()`, `retirerStock()`, `ajouterStock()`, `calculerMarge()`, `estSoldee()`), et des relations de composition fortes.
-    - **Dossier d'architecture** : Rédaction de `docs/README.md` exposant l'architecture en couches (*Clean Layered / MVC*) et la matrice des permissions RBAC.
-  - **Schéma SQL PostgreSQL & SQLite (Step 1.2)** :
-    - **Script PostgreSQL (`database/schema.sql` et `schema.sql`)** : Modélisation normalisée en 3FN de 15 tables relationnelles (`roles`, `utilisateurs`, `categories`, `produits`, `clients`, `fournisseurs`, `modes_paiement`, `statuts_dette`, `statuts_appro`, `ventes`, `lignes_vente`, `dettes`, `paiements`, `approvisionnements`, `lignes_approvisionnement`).
-    - **Script SQLite (`database/schema_sqlite.sql` et `schema_sqlite.sql`)** : Adaptation rigoureuse pour SQLite (`INTEGER PRIMARY KEY AUTOINCREMENT`, activation `PRAGMA foreign_keys = ON;`, types `REAL` et dates ISO standard).
-    - **Contraintes d'intégrité & Règles métier BDD** : Mise en place de contraintes `CHECK` strictes (`qte_stock >= 0`, `prix_vente >= prix_achat`, `limite_credit >= 0`, `montant_restant <= montant_total`, `quantite > 0`, `remise >= 0`).
-    - **Indexation** : Création d'index de performance sur les clés étrangères et colonnes de recherche fréquentes (`code`, `role_id`, `client_id`, `date_vente`, etc.).
-    - **Jeu de données initial (Seeding)** : Insertion des rôles, statuts, modes de règlement, 4 utilisateurs par défaut avec mot de passe hashé (`password_hash('password123', PASSWORD_BCRYPT)`), catalogue de produits, fournisseurs, clients avec plafonds de crédit et créances initiales pour les tests de caisse et de recouvrement.
-- **Difficultés / Obstacles** : 
-  - *Choix d'une modélisation 100% Classes POO* : Remplacement des énumérations par des classes d'entités/référentiels pour assurer une parfaite cohérence avec le schéma relationnel SQL (tables de lookup avec clés étrangères).
-  - *Différences de dialectes entre PostgreSQL et SQLite* : Gestion des types auto-incrémentés (`SERIAL` vs `INTEGER PRIMARY KEY AUTOINCREMENT`), des types booléens (`BOOLEAN` vs `INTEGER CHECK (actif IN (0, 1))`) et des fonctions temporelles (`CURRENT_TIMESTAMP - INTERVAL '3 days'` vs `DATETIME('now', '-3 days')`).
-  - *Garantie de l'intégrité référentielle en cascade* : Configuration des `ON DELETE CASCADE` pour les compositions fortes (`lignes_vente`, `lignes_approvisionnement`, `paiements`) et `ON DELETE RESTRICT` pour protéger les entités maîtresses (`produits`, `clients`, `fournisseurs`, `roles`).
+
+---
+
+#### 📌 Step 1.1 (19h00 - 20h30) : Conception & Modélisation UML (Use Cases & Diagramme de Classes POO)
+
+- **Heure de réalisation** : 19h00 - 20h30
+- **Ce qui a été fait** :
+
+  1. **Analyse Approfondie du Domaine Métier & Cahier des Charges** :
+     - Étude détaillée du prototype d'interface (`storemanager_pro_app.html`) et de la charte de projet.
+     - Identification des problématiques clés de gestion commerciale : gestion de caisse tactile en temps réel, support de règlements multiples (Cash, Wave, Orange Money, Carte Bancaire, Crédit), traçabilité stricte des dettes clients avec gestion du plafond de crédit (`limite_credit`), chaîne d'approvisionnement logistique via Bons de Livraison (BL) fournisseurs, et valorisation continue des stocks avec seuils d'alerte critique.
+
+  2. **Matrice de Ségrégation des Responsabilités & Rôles (RBAC)** :
+     - Formalisation de 4 profils utilisateurs distincts aux périmètres fonctionnels hermétiques :
+       - **👑 Admin Boutique (`ADMIN`)** : Contrôle absolu sur l'ensemble de l'ERP (visualisation des KPIs financiers globaux sur le Dashboard, gestion des comptes utilisateurs et attribution des rôles, paramétrage général du catalogue, des clients, des fournisseurs et clôture comptable).
+       - **🛒 Chargé de Vente (`VENTE`)** : Opérateur dédié au point de vente (caisse POS tactile). Il recherche les articles (par code-barres ou libellé), gère le panier, applique les remises, valide les encaissements et dispose du droit exclusif de consulter le registre des créances pour enregistrer des remboursements de dettes.
+       - **📦 Chargé de Stock (`STOCK`)** : Responsable logistique amont. Il réceptionne les marchandises fournisseurs sous Bon de Livraison (BL), saisit les quantités reçues et prix d'achat, incrémente le stock physique et gère le catalogue produits et fournisseurs. Il n'a aucun accès aux fonctions d'encaissement de caisse ni aux créances clients.
+       - **📋 Inventaire (`INVENTAIRE`)** : Rôle d'audit et de contrôle périodique. Il accède en mode consultation et comptage physique aux répertoires des articles et des tiers, sans possibilité d'altérer les données financières, de modifier les prix ou d'effectuer des ventes.
+
+  3. **Modélisation du Diagramme de Cas d'Utilisation (`docs/use_cases.puml`)** :
+     - Structuration modulaire en 6 packages fonctionnels : *Authentification & Profils*, *Caisse POS & Ventes*, *Gestion des Dettes & Règlements*, *Approvisionnements & Réception BL*, *Catalogue & Répertoires Tiers*, *Dashboard & Pilotage*.
+     - **Formalisation rigoureuse des relations d'inclusion (`<<include>>`)** :
+       - `UC_ValiderVente` $\xrightarrow{<<include>>}$ `UC_ManageCart` : Une vente ne peut être finalisée sans la constitution préalable d'un panier chiffré.
+       - `UC_ValiderVente` $\xrightarrow{<<include>>}$ `UC_DecStock` : La validation transactionnelle d'une vente décrémente obligatoirement et atomiquement le stock des produits vendus.
+       - `UC_ValiderVente` $\xrightarrow{<<include>>}$ `UC_PrintTicket` : Chaque vente génère obligatoirement une facture/ticket de caisse horodaté.
+       - `UC_PayDebt` $\xrightarrow{<<include>>}$ `UC_UpdateDebtStatus` : L'enregistrement d'un versement recalcule le solde restant et bascule automatiquement le statut en `SOLDEE` dès que `montant_restant = 0`.
+       - `UC_CreateBL` $\xrightarrow{<<include>>}$ `UC_IncStock` & `UC_SelectSupplier` : L'enregistrement d'un Bon de Livraison augmente automatiquement les stocks des produits réceptionnés et associe obligatoirement le fournisseur concerné.
+     - **Formalisation rigoureuse des relations d'extension (`<<extend>>`)** :
+       - `UC_ValiderVente` $\xleftarrow{<<extend>>}$ `UC_CheckCredit` : L'extension de contrôle de solvabilité ne s'exécute **que sous la condition** où le mode de paiement choisi est *Dette / À crédit*. Le système vérifie la règle d'invariance : `(Dettes actuelles du client + Montant du panier) <= Limite de crédit autorisée`.
+       - `UC_ValiderVente` $\xleftarrow{<<extend>>}$ `UC_SelectClient` : Conditionnelle si la vente est rattachée à un compte client nominatif (obligatoire en cas de vente à crédit, facultatif pour une vente au comptoir passager).
+
+  4. **Modélisation du Diagramme de Classes 100% POO Pure (`docs/diagramme_classes.puml`)** :
+     - **Choix d'Architecture 100% Classes** : Remplacement délibéré des énumérations (`enum`) par des classes pures (`Role`, `StatutDette`, `ModePaiement`, `StatutAppro`, `Categorie`) dotées d'identifiants, de codes et de libellés. Ce choix garantit un découplage optimal, facilite l'hydratation objet depuis PDO et correspond parfaitement au schéma relationnel sous-jacent (tables de référence avec clés étrangères).
+     - **Encapsulation & Logique Métier par Entité** :
+       - **`Client`** : Encapsule la gestion du risque client avec les propriétés privées `limiteCredit` et `totalDettesActuelles`. Méthodes métiers clés :
+         - `getCreditDisponible(): float` : Retourne `max(0, limiteCredit - totalDettesActuelles)`.
+         - `peutPrendreCredit(float $montant): bool` : Vérifie si `(totalDettesActuelles + montant) <= limiteCredit`.
+         - `ajouterDette(float $montant): void` : Augmente l'encours de dette client lors d'une vente à crédit.
+         - `diminuerDette(float $montant): void` : Réduit l'encours de dette lors d'un remboursement.
+       - **`Produit`** : Encapsule la tenue de stock et les calculs de rentabilité :
+         - `estEnAlerte(): bool` : Détecte si `qteStock <= seuilAlerte`.
+         - `calculerMarge(): float` : Retourne `prixVente - prixAchat`.
+         - `calculerTauxMarge(): float` : Calcule le ratio de marge commerciale en pourcentage.
+         - `retirerStock(int $quantite): bool` : Décrémente le stock de façon sécurisée en vérifiant la disponibilité (lève une exception si stock insuffisant).
+         - `ajouterStock(int $quantite): void` : Incrémente le stock lors de la réception d'un approvisionnement.
+       - **`Vente` & `LigneVente` (Composition Forte `*--`)** :
+         - La classe `Vente` gère l'en-tête de transaction (`numeroFacture`, `dateVente`, `montantTotal`, `montantPaye`, `montantRestant`) et contient une collection d'objets `LigneVente[]`.
+         - `calculerTotal(): float` : Parcourt l'ensemble des lignes pour recalculer la somme exacte des sous-totaux `(prixUnitaire * quantite - remise)`.
+         - `estACredit(): bool` : Détermine si la vente a généré une créance non réglée.
+       - **`Dette` & `Paiement` (Cycle de Vie de la Créance)** :
+         - L'entité `Dette` trace la créance générée par une vente (`montantTotal`, `montantRestant`, `dateEcheance`, `statut`).
+         - `enregistrerPaiement(Paiement $paiement): void` : Déduit le montant encaissé de `montantRestant`, ajoute le paiement à la collection `paiements[]`, et bascule l'état vers `SOLDEE` si `montantRestant <= 0`.
+         - `estEnRetard(): bool` : Compare la date du jour à la `dateEcheance` pour les dettes non soldées.
+       - **`Approvisionnement` & `LigneApprovisionnement` (Composition Forte `*--`)** :
+         - Trace les réceptions de marchandises avec numéro de Bon de Livraison (BL), fournisseur, date et opérateur de stock.
+       - **`User`** :
+         - Sécurisation du mot de passe via hachage cryptographique (`password_hash` / `PASSWORD_BCRYPT`).
+         - `hasRole(string $codeRole): bool` : Vérifie l'habilitation de l'utilisateur pour le filtrage des routes et contrôleurs.
+
+- **Difficultés / Obstacles & Arbitrages de Conception** :
+  - *Découplage Vente / Dette* : Une vente à crédit ne doit pas écraser les données de facturation d'origine. La création d'une entité `Dette` dédiée, rattachée à la fois à `Vente` et à `Client`, permet de gérer sereinement un échéancier et des versements fractionnés multiples (`Paiement[]`) sans dénaturer la facture initiale.
+  - *Frontière Modèle / Service* : Veiller scrupuleusement à ce que les entités POO contiennent toute la logique métier pure (calculs, validations, invariants), tandis que les futurs services (`VenteService`, `DebtService`, `SupplyService`) prendront en charge l'orchestration technique (transactions PDO, commits, rollbacks, persistance).
+
+---
+
+#### 📌 Step 1.2 (20h30 - 22h00) : Schéma SQL Relationnel (PostgreSQL & SQLite)
+
+- **Heure de réalisation** : 20h30 - 22h00
+- **Ce qui a été fait** :
+
+  1. **Conception du Schéma Relationnel Normalisé en 3FN** :
+     - Modélisation de **15 tables relationnelles** dans les scripts `database/schema.sql` (PostgreSQL) et `database/schema_sqlite.sql` (SQLite) :
+       - Référentiels : `roles`, `modes_paiement`, `statuts_dette`, `statuts_appro`, `categories`.
+       - Acteurs & Tiers : `utilisateurs`, `clients`, `fournisseurs`.
+       - Catalogue & Stock : `produits`.
+       - Ventes Caisse : `ventes`, `lignes_vente`.
+       - Créances & Règlements : `dettes`, `paiements`.
+       - Approvisionnements : `approvisionnements`, `lignes_approvisionnement`.
+
+  2. **Mise en Place de l'Intégrité Référentielle & Règles de Suppression (`ON DELETE`)** :
+     - `ON DELETE CASCADE` appliqué aux entités dépendantes fortes (compositions) : la suppression d'une vente entraîne la suppression de ses `lignes_vente` ; la suppression d'une dette supprime ses `paiements` associés ; la suppression d'un approvisionnement supprime ses `lignes_approvisionnement`.
+     - `ON DELETE RESTRICT` appliqué aux entités maîtresses pour interdire toute suppression accidentelle : un produit lié à des lignes de vente ou d'approvisionnement ne peut être supprimé ; un rôle attribué à des utilisateurs est protégé ; un client ayant un historique de dettes est protégé.
+     - `ON DELETE SET NULL` appliqué aux associations facultatives (ex: catégorie d'un produit, client rattaché à une vente comptoir).
+
+  3. **Sécurisation par Contraintes d'Intégrité Métier (`CHECK`)** :
+     - `produits` :
+       - `CHECK (prix_achat >= 0)` & `CHECK (prix_vente >= 0)`
+       - `CHECK (prix_vente >= prix_achat)` : Interdiction formelle de vendre à perte au niveau du schéma.
+       - `CHECK (qte_stock >= 0)` : Protection absolue contre les stocks physiques négatifs.
+       - `CHECK (seuil_alerte >= 0)`
+     - `clients` :
+       - `CHECK (limite_credit >= 0)` & `CHECK (total_dettes_actuelles >= 0)`
+     - `ventes` :
+       - `CHECK (montant_total >= 0)`, `CHECK (montant_paye >= 0)`, `CHECK (montant_restant >= 0)`
+     - `lignes_vente` :
+       - `CHECK (quantite > 0)`, `CHECK (prix_unitaire >= 0)`, `CHECK (remise >= 0)`, `CHECK (sous_total >= 0)`
+     - `dettes` :
+       - `CHECK (montant_total >= 0)`, `CHECK (montant_restant >= 0)`
+       - `CHECK (montant_restant <= montant_total)` : Cohérence arithmétique garantissant que le reste dû ne peut dépasser la créance d'origine.
+     - `paiements` :
+       - `CHECK (montant > 0)` : Interdiction d'enregistrer des versements nuls ou négatifs.
+     - `lignes_approvisionnement` :
+       - `CHECK (quantite > 0)`, `CHECK (prix_achat_unitaire >= 0)`
+
+  4. **Optimisation des Performances par Indexation Ciblée** :
+     - Index B-Tree créés sur toutes les clés étrangères (`idx_utilisateurs_role`, `idx_ventes_client`, `idx_ventes_user`, `idx_lignes_vente_vente`, `idx_lignes_vente_produit`, `idx_dettes_client`, `idx_paiements_dette`, `idx_appro_fournisseur`).
+     - Index composites sur les requêtes fréquentes : `idx_produits_stock_alerte (qte_stock, seuil_alerte)` pour l'affichage instantané des alertes de rupture sur le Dashboard ; `idx_ventes_date (date_vente)` pour les clôtures de caisse journalières.
+
+  5. **Stratégie de Données d'Amorçage (Seeding Réaliste)** :
+     - Insertion des 4 rôles et de leurs descriptions.
+     - Insertion des 5 modes de paiement (`ESPECES`, `WAVE`, `ORANGE_MONEY`, `CARTE_BANCAIRE`, `DETTE`).
+     - Insertion des 3 statuts de dettes (`NON_SOLDEE`, `SOLDEE`, `EN_RETARD`) et des 3 statuts d'approvisionnement (`EN_ATTENTE`, `RECU`, `ANNULE`).
+     - 4 utilisateurs prêts à l'emploi avec mots de passe hashés par `password_hash('password123', PASSWORD_BCRYPT)` :
+       - Admin : `admin@storemanager.pro`
+       - Vente : `vente@storemanager.pro`
+       - Stock : `stock@storemanager.pro`
+       - Inventaire : `inventaire@storemanager.pro`
+     - 4 catégories d'articles, 3 fournisseurs dakarois, 4 clients avec historique de crédit (ex: Diop Amadou avec 45 000 FCFA d'encours, Babacar Faye avec 85 000 FCFA d'encours sur 100 000 FCFA autorisés).
+     - 8 produits de test complets avec prix d'achat, prix de vente et stocks (Riz 25kg, Huile 5L, Sucre, Eau minérale, Soda, Savons, Javel, Lampes LED).
+     - Ventes d'essai avec lignes de vente et dettes associées pour tester immédiatement les fonctionnalités de caisse et de recouvrement.
+
+  6. **Validation & Tests Automatisés du Schéma SQLite** :
+     - Test d'exécution directe via l'utilitaire CLI `sqlite3` sur une base locale temporaire.
+     - Vérification de l'activation des contraintes avec `PRAGMA foreign_key_check;` : **0 erreur / intégrité 100% validée**.
+     - Validation du comptage des enregistrements seedés (4 utilisateurs, 8 produits, 2 dettes actives).
+
+- **Difficultés / Obstacles & Solutions Multi-SGBD** :
+  - *Gestion des dialectes entre PostgreSQL et SQLite* :
+    - Clés primaires auto-incrémentées : `SERIAL PRIMARY KEY` sous PostgreSQL vs `INTEGER PRIMARY KEY AUTOINCREMENT` sous SQLite.
+    - Types booléens : type natif `BOOLEAN` sous PostgreSQL vs `INTEGER DEFAULT 1 CHECK (actif IN (0, 1))` sous SQLite.
+    - Fonctions de manipulation de dates : `CURRENT_TIMESTAMP - INTERVAL '3 days'` sous PostgreSQL vs `DATETIME('now', '-3 days')` sous SQLite.
+    - Précision monétaire : `NUMERIC(12, 2)` sous PostgreSQL vs `REAL` sous SQLite.
+  - *Activation des clés étrangères sous SQLite* : Par défaut, SQLite désactive la vérification des clés étrangères. L'ajout impératif de la directive `PRAGMA foreign_keys = ON;` en en-tête du script garantit le respect strict des contraintes d'intégrité même en mode fallback local.
+
+---
+
+#### 📌 Step 1.3 (22h00 - 23h00) : Singleton Database & Fallback Automatique
+
+- **Heure de réalisation** : 22h00 - 23h00
+- **Ce qui a été fait** :
+
+  1. **Implémentation du Design Pattern Singleton (`src/Core/Database.php`)** :
+     - **Instance unique** stockée dans une variable statique privée `private static ?Database $instance = null`.
+     - **Verrouillage de l'instanciation directe** : Constructeur privé `private function __construct()` pour interdire tout `new Database()`.
+     - **Verrouillage de la duplication** : Méthode magique `private function __clone()` pour empêcher la copie d'objet.
+     - **Verrouillage de la désérialisation** : Méthode `public function __wakeup()` levant explicitement une `Exception` pour empêcher la création d'instances fantômes par `unserialize()`.
+     - **Point d'accès universel** : Méthode publique statique `public static function getInstance(): Database` et helper statique `public static function getPDO(): PDO`.
+
+  2. **Mécanisme de Résilience & Fallback Automatique (`try / catch`)** :
+     - **Étape 1 (Tentative PostgreSQL prioritaire)** : Récupération des paramètres de connexion (variables d'environnement `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` ou valeurs de production par défaut). Construction du DSN `pgsql:host=...;port=...;dbname=...;` et instanciation PDO sous bloc `try`.
+     - **Étape 2 (Capture & Bascule SQLite)** : Si PostgreSQL est indisponible (serveur arrêté, mauvais identifiants ou réseau coupé), l'exception `\PDOException` est interceptée dans le bloc `catch`. Le système enregistre l'erreur et déclenche immédiatement la connexion locale SQLite sur `database/erp.db`.
+     - **Étape 3 (Auto-initialisation / Self-healing)** : Si le fichier de base SQLite `database/erp.db` n'existe pas ou est vide (0 octet), la classe charge et exécute automatiquement le script `database/schema_sqlite.sql`. L'application est ainsi immédiatement opérationnelle sans intervention manuelle.
+     - **Étape 4 (Activation des contraintes SQLite)** : Exécution immédiate de `PRAGMA foreign_keys = ON;` pour garantir l'intégrité référentielle en mode local.
+
+  3. **Configuration Strictement Sécurisée de PDO** :
+     - `PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION` : Toutes les erreurs SQL (violations de contraintes `CHECK`, `FOREIGN KEY`, syntaxe) lèvent obligatoirement des exceptions `PDOException`, permettant une gestion propre dans les couches Services.
+     - `PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC` : Toutes les sélections retournent nativement des tableaux associatifs indexés par nom de colonne.
+     - `PDO::ATTR_EMULATE_PREPARES => false` : Désactivation de l'émulation des requêtes préparées. Les requêtes sont préparées directement par le moteur du SGBD, offrant une protection native absolue contre les injections SQL.
+
+  4. **Méthodes Utilitaires & Gestion Transactionnelle** :
+     - Méthodes passerelles `beginTransaction()`, `commit()`, `rollBack()`, `inTransaction()` et `lastInsertId()` directement accessibles depuis l'instance `Database`, facilitant l'écriture de transactions atomiques dans les services métiers.
+     - Méthodes d'inspection du driver actif : `getDriver(): string`, `isPgsql(): bool`, `isSqlite(): bool`, et `getConnectionMessage(): ?string`.
+
+- **Difficultés / Obstacles & Solutions** :
+  - *Gestion du double échec* : Si le serveur PostgreSQL ET le pilote SQLite échouent simultanément, la classe lève une `Exception` explicative détaillée combinant les deux messages d'erreur pour un diagnostic immédiat.
+  - *Autonomie de la base SQLite* : Le mécanisme d'auto-création du répertoire `database/` et d'exécution automatique du fichier `schema_sqlite.sql` garantit le déploiement zéro-configuration sur tout nouvel environnement de développement.
+
+---

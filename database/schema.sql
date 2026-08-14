@@ -1,4 +1,3 @@
-
 DROP TABLE IF EXISTS lignes_approvisionnement CASCADE;
 DROP TABLE IF EXISTS approvisionnements CASCADE;
 DROP TABLE IF EXISTS paiements CASCADE;
@@ -14,8 +13,6 @@ DROP TABLE IF EXISTS modes_paiement CASCADE;
 DROP TABLE IF EXISTS statuts_dette CASCADE;
 DROP TABLE IF EXISTS statuts_appro CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
-
-
 
 CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
@@ -50,7 +47,6 @@ CREATE TABLE categories (
     description TEXT
 );
 
-
 CREATE TABLE utilisateurs (
     id SERIAL PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
@@ -84,7 +80,6 @@ CREATE TABLE fournisseurs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
 CREATE TABLE produits (
     id SERIAL PRIMARY KEY,
     code VARCHAR(100) UNIQUE NOT NULL,
@@ -98,8 +93,6 @@ CREATE TABLE produits (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_prix_coherence CHECK (prix_vente >= prix_achat)
 );
-
-
 
 CREATE TABLE ventes (
     id SERIAL PRIMARY KEY,
@@ -125,7 +118,6 @@ CREATE TABLE lignes_vente (
     sous_total NUMERIC(12, 2) NOT NULL CHECK (sous_total >= 0)
 );
 
-
 CREATE TABLE dettes (
     id SERIAL PRIMARY KEY,
     vente_id INTEGER REFERENCES ventes(id) ON DELETE SET NULL,
@@ -150,8 +142,6 @@ CREATE TABLE paiements (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
-
 CREATE TABLE approvisionnements (
     id SERIAL PRIMARY KEY,
     numero_bl VARCHAR(100) UNIQUE NOT NULL,
@@ -172,8 +162,6 @@ CREATE TABLE lignes_approvisionnement (
     sous_total NUMERIC(12, 2) NOT NULL CHECK (sous_total >= 0)
 );
 
-
-
 CREATE INDEX idx_utilisateurs_role ON utilisateurs(role_id);
 CREATE INDEX idx_produits_code ON produits(code);
 CREATE INDEX idx_produits_categorie ON produits(categorie_id);
@@ -188,8 +176,6 @@ CREATE INDEX idx_dettes_statut ON dettes(statut_id);
 CREATE INDEX idx_paiements_dette ON paiements(dette_id);
 CREATE INDEX idx_appro_fournisseur ON approvisionnements(fournisseur_id);
 CREATE INDEX idx_appro_statut ON approvisionnements(statut_id);
-
-
 
 INSERT INTO roles (code, libelle, description) VALUES
 ('ADMIN', 'Admin Boutique', 'Contrôle total sur la comptabilité, ventes, dettes, approvisionnements et utilisateurs'),
