@@ -1,5 +1,4 @@
 @startuml
-!theme plain
 skinparam roundcorner 8
 skinparam defaultFontName Arial
 skinparam shadowing false
@@ -13,9 +12,6 @@ skinparam class {
 
 title **Diagramme de Classes POO — StoreManager Pro (ERP / POS)**
 
-' ==========================================
-' CLASSES DE RÉFÉRENTIELS & PARAMÉTRAGES
-' ==========================================
 class Role {
     -id: int
     -code: string
@@ -67,9 +63,6 @@ class Categorie {
     +getDescription(): ?string
 }
 
-' ==========================================
-' ENTITÉS MÉTIER PRINCIPALES
-' ==========================================
 class User {
     -id: int
     -nom: string
@@ -286,9 +279,6 @@ class LigneApprovisionnement {
     +calculerSousTotal(): float
 }
 
-' ==========================================
-' RELATIONS ET ASSOCIATIONS
-' ==========================================
 User "1" --> "1" Role : possede
 User "1" --> "0..*" Vente : enregistre
 User "1" --> "0..*" Paiement : encaisse

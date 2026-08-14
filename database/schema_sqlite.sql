@@ -1,4 +1,3 @@
-
 PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS lignes_approvisionnement;
@@ -16,7 +15,6 @@ DROP TABLE IF EXISTS modes_paiement;
 DROP TABLE IF EXISTS statuts_dette;
 DROP TABLE IF EXISTS statuts_appro;
 DROP TABLE IF EXISTS roles;
-
 
 CREATE TABLE roles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +48,6 @@ CREATE TABLE categories (
     libelle TEXT NOT NULL,
     description TEXT
 );
-
 
 CREATE TABLE utilisateurs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,8 +83,6 @@ CREATE TABLE fournisseurs (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-
-
 CREATE TABLE produits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT UNIQUE NOT NULL,
@@ -102,8 +97,6 @@ CREATE TABLE produits (
     CONSTRAINT check_prix_coherence CHECK (prix_vente >= prix_achat),
     FOREIGN KEY (categorie_id) REFERENCES categories(id) ON DELETE SET NULL
 );
-
-
 
 CREATE TABLE ventes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,8 +126,6 @@ CREATE TABLE lignes_vente (
     FOREIGN KEY (vente_id) REFERENCES ventes(id) ON DELETE CASCADE,
     FOREIGN KEY (produit_id) REFERENCES produits(id) ON DELETE RESTRICT
 );
-
-
 
 CREATE TABLE dettes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -166,8 +157,6 @@ CREATE TABLE paiements (
     FOREIGN KEY (user_id) REFERENCES utilisateurs(id) ON DELETE RESTRICT
 );
 
-
-
 CREATE TABLE approvisionnements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     numero_bl TEXT UNIQUE NOT NULL,
@@ -193,8 +182,6 @@ CREATE TABLE lignes_approvisionnement (
     FOREIGN KEY (produit_id) REFERENCES produits(id) ON DELETE RESTRICT
 );
 
-
-
 CREATE INDEX idx_utilisateurs_role ON utilisateurs(role_id);
 CREATE INDEX idx_produits_code ON produits(code);
 CREATE INDEX idx_produits_categorie ON produits(categorie_id);
@@ -209,8 +196,6 @@ CREATE INDEX idx_dettes_statut ON dettes(statut_id);
 CREATE INDEX idx_paiements_dette ON paiements(dette_id);
 CREATE INDEX idx_appro_fournisseur ON approvisionnements(fournisseur_id);
 CREATE INDEX idx_appro_statut ON approvisionnements(statut_id);
-
-
 
 INSERT INTO roles (id, code, libelle, description) VALUES
 (1, 'ADMIN', 'Admin Boutique', 'Contrôle total sur la comptabilité, ventes, dettes, approvisionnements et utilisateurs'),

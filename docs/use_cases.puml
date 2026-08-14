@@ -1,32 +1,33 @@
 @startuml
-!theme plain
 skinparam roundcorner 10
 skinparam defaultFontName Arial
 skinparam packageStyle rectangle
 skinparam shadowing false
 
+skinparam actor {
+    BackgroundColor #EDF2F7
+    BorderColor #2B6CB0
+}
+
+skinparam usecase {
+    BackgroundColor #FFFFFF
+    BorderColor #2B6CB0
+    ArrowColor #2B6CB0
+}
 
 title **Diagramme de Cas d'Utilisation — StoreManager Pro (ERP / POS)**
 
 left to right direction
 
-' ==========================================
-' ACTEURS
-' ==========================================
 actor " Admin Boutique\n(Admin)" as Admin
 actor " Chargé de Vente\n(Vente)" as Vente
 actor " Chargé de Stock\n(Stock)" as Stock
 actor " Inventaire\n(Inventaire)" as Inventaire
 
-' Hiérarchie d'acteurs (L'admin hérite des rôles)
 Admin --|> Vente
 Admin --|> Stock
 Admin --|> Inventaire
 Stock --|> Inventaire
-
-' ==========================================
-' PACKAGES & CAS D'UTILISATION
-' ==========================================
 
 package " Authentification & Profils" {
     usecase "S'authentifier (Email / Password)" as UC_Login
@@ -35,8 +36,8 @@ package " Authentification & Profils" {
 
 package " Caisse Tactile (POS) & Ventes" {
     usecase "Consulter Registre Général des Ventes & Commandes" as UC_SearchProd
-    usecase "Choisir le methode de paiement" as UC_Cart
-    usecase "Calculer le montant total net a payer" as UC_Montant
+    usecase "Choisir la méthode de paiement" as UC_Cart
+    usecase "Calculer le montant total net à payer" as UC_Montant
     usecase "Sélectionner un client" as UC_SelectClient
     usecase "Valider la vente" as UC_ValiderVente
     usecase "Contrôler limite de crédit" as UC_CheckCredit
@@ -55,8 +56,8 @@ package " Approvisionnements & Réception Marchandises" {
     usecase "Consulter détails réception commande produit" as UC_StockAlerts
     usecase "Enregistrer Bon de Livraison (BL)" as UC_CreateBL
     usecase "Incrémenter le stock produits" as UC_IncStock
-    usecase "Saisir les quantités reçues" as UC_QteReçue
-    usecase "valider la réception en stock" as UC_SelectSupplier
+    usecase "Saisir les quantités reçues" as UC_QteRecue
+    usecase "Valider la réception en stock" as UC_SelectSupplier
 }
 
 package " Catalogue & Répertoires Tiers" {
@@ -72,11 +73,6 @@ package " Dashboard, Pilotage & Administration" {
     usecase "Consulter rapports d'audit" as UC_Reports
 }
 
-' ==========================================
-' ASSOCIATIONS ACTEURS -> USE CASES
-' ==========================================
-
-' Authentification
 Admin --> UC_Login
 Admin --> UC_Logout
 Vente --> UC_Login
@@ -86,36 +82,25 @@ Stock --> UC_Logout
 Inventaire --> UC_Login
 Inventaire --> UC_Logout
 
-' Vente POS
 Vente --> UC_SearchProd
 Vente --> UC_ValiderVente
 
-
-' Dettes
 Vente --> UC_ViewDebts
 Vente --> UC_PayDebt
 Vente --> UC_ClientDebtHistory
 
-' Stock & Approvisionnement
 Stock --> UC_StockAlerts
 Stock --> UC_CreateBL
 
-
-
-' Inventaire
 Inventaire --> UC_AuditStock
 Inventaire --> UC_ManageProd
 Inventaire --> UC_ManageClients
 Inventaire --> UC_ManageSuppliers
 
-' Admin Exclusifs
 Admin --> UC_Dashboard
 Admin --> UC_ManageUsers
 Admin --> UC_Reports
 
-' ==========================================
-' RELATIONS D'INCLUSION & D'EXTENSION
-' ==========================================
 UC_PrintTicket ..> UC_Montant : <<include>>
 UC_ValiderVente ..> UC_DecStock : <<include>>
 UC_ValiderVente ..> UC_PrintTicket : <<include>>
@@ -127,6 +112,6 @@ UC_PayDebt ..> UC_UpdateDebtStatus : <<include>>
 
 UC_CreateBL ..> UC_IncStock : <<include>>
 UC_CreateBL ..> UC_SelectSupplier : <<include>>
-UC_CreateBL <.. UC_QteReçue : <<extend>>
+UC_CreateBL <.. UC_QteRecue : <<extend>>
 
 @enduml
