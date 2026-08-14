@@ -1,0 +1,317 @@
+@startuml
+!theme plain
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+skinparam class {
+    BackgroundColor #FFFFFF
+    ArrowColor #1A365D
+    BorderColor #2B6CB0
+}
+
+title **Diagramme de Classes POO — StoreManager Pro (ERP / POS)**
+
+' ==========================================
+' CLASSES DE RÉFÉRENTIELS & PARAMÉTRAGES
+' ==========================================
+class Role {
+    -id: int
+    -code: string
+    -libelle: string
+    -description: ?string
+    +getId(): int
+    +getCode(): string
+    +getLibelle(): string
+    +getDescription(): ?string
+}
+
+class StatutDette {
+    -id: int
+    -code: string
+    -libelle: string
+    +getId(): int
+    +getCode(): string
+    +getLibelle(): string
+}
+
+class ModePaiement {
+    -id: int
+    -code: string
+    -libelle: string
+    -estActif: bool
+    +getId(): int
+    +getCode(): string
+    +getLibelle(): string
+    +isEstActif(): bool
+}
+
+class StatutAppro {
+    -id: int
+    -code: string
+    -libelle: string
+    +getId(): int
+    +getCode(): string
+    +getLibelle(): string
+}
+
+class Categorie {
+    -id: int
+    -code: string
+    -libelle: string
+    -description: ?string
+    +getId(): int
+    +getCode(): string
+    +getLibelle(): string
+    +getDescription(): ?string
+}
+
+' ==========================================
+' ENTITÉS MÉTIER PRINCIPALES
+' ==========================================
+class User {
+    -id: int
+    -nom: string
+    -prenom: string
+    -email: string
+    -motDePasse: string
+    -roleId: int
+    -role: Role
+    -actif: bool
+    -dateCreation: DateTime
+    +getId(): int
+    +getNomComplet(): string
+    +getEmail(): string
+    +getRole(): Role
+    +hasRole(codeRole: string): bool
+    +verifierMotDePasse(plainPassword: string): bool
+    +setMotDePasse(plainPassword: string): void
+    +isActif(): bool
+}
+
+class Produit {
+    -id: int
+    -code: string
+    -libelle: string
+    -description: ?string
+    -prixAchat: float
+    -prixVente: float
+    -qteStock: int
+    -seuilAlerte: int
+    -categorieId: ?int
+    -categorie: ?Categorie
+    +getId(): int
+    +getCode(): string
+    +getLibelle(): string
+    +getPrixAchat(): float
+    +getPrixVente(): float
+    +getQteStock(): int
+    +getSeuilAlerte(): int
+    +estEnAlerte(): bool
+    +calculerMarge(): float
+    +calculerTauxMarge(): float
+    +ajouterStock(quantite: int): void
+    +retirerStock(quantite: int): bool
+}
+
+class Client {
+    -id: int
+    -nom: string
+    -prenom: string
+    -telephone: string
+    -email: ?string
+    -adresse: ?string
+    -limiteCredit: float
+    -totalDettesActuelles: float
+    +getId(): int
+    +getNomComplet(): string
+    +getTelephone(): string
+    +getEmail(): ?string
+    +getAdresse(): ?string
+    +getLimiteCredit(): float
+    +getTotalDettesActuelles(): float
+    +getCreditDisponible(): float
+    +peutPrendreCredit(montant: float): bool
+    +ajouterDette(montant: float): void
+    +diminuerDette(montant: float): void
+}
+
+class Fournisseur {
+    -id: int
+    -nom: string
+    -contactNom: string
+    -telephone: string
+    -email: ?string
+    -adresse: ?string
+    +getId(): int
+    +getNom(): string
+    +getContactNom(): string
+    +getTelephone(): string
+    +getEmail(): ?string
+    +getAdresse(): ?string
+}
+
+class Vente {
+    -id: int
+    -numeroFacture: string
+    -dateVente: DateTime
+    -montantTotal: float
+    -montantPaye: float
+    -montantRestant: float
+    -modePaiementId: int
+    -modePaiement: ModePaiement
+    -statut: string
+    -clientId: ?int
+    -client: ?Client
+    -userId: int
+    -vendeur: ?User
+    -lignes: LigneVente[*]
+    +getId(): int
+    +getNumeroFacture(): string
+    +getDateVente(): DateTime
+    +getMontantTotal(): float
+    +getMontantPaye(): float
+    +getMontantRestant(): float
+    +getModePaiement(): ModePaiement
+    +getClient(): ?Client
+    +getVendeur(): ?User
+    +getLignes(): LigneVente[*]
+    +ajouterLigne(ligne: LigneVente): void
+    +calculerTotal(): float
+    +estACredit(): bool
+}
+
+class LigneVente {
+    -id: int
+    -venteId: int
+    -produitId: int
+    -produit: ?Produit
+    -quantite: int
+    -prixUnitaire: float
+    -remise: float
+    +getId(): int
+    +getProduitId(): int
+    +getProduit(): ?Produit
+    +getQuantite(): int
+    +getPrixUnitaire(): float
+    +getRemise(): float
+    +calculerSousTotal(): float
+}
+
+class Dette {
+    -id: int
+    -venteId: int
+    -vente: ?Vente
+    -clientId: int
+    -client: ?Client
+    -montantTotal: float
+    -montantRestant: float
+    -dateCreation: DateTime
+    -dateEcheance: ?DateTime
+    -statutId: int
+    -statut: StatutDette
+    -paiements: Paiement[*]
+    +getId(): int
+    +getVenteId(): int
+    +getClientId(): int
+    +getClient(): ?Client
+    +getMontantTotal(): float
+    +getMontantRestant(): float
+    +getDateCreation(): DateTime
+    +getDateEcheance(): ?DateTime
+    +getStatut(): StatutDette
+    +getPaiements(): Paiement[*]
+    +enregistrerPaiement(paiement: Paiement): void
+    +estSoldee(): bool
+    +estEnRetard(): bool
+}
+
+class Paiement {
+    -id: int
+    -detteId: int
+    -dette: ?Dette
+    -montant: float
+    -datePaiement: DateTime
+    -modePaiementId: int
+    -modePaiement: ModePaiement
+    -referencePaiement: ?string
+    -userId: int
+    -agent: ?User
+    +getId(): int
+    +getDetteId(): int
+    +getMontant(): float
+    +getDatePaiement(): DateTime
+    +getModePaiement(): ModePaiement
+    +getReferencePaiement(): ?string
+    +getUserId(): int
+    +getAgent(): ?User
+}
+
+class Approvisionnement {
+    -id: int
+    -numeroBL: string
+    -dateAppro: DateTime
+    -montantTotal: float
+    -statutId: int
+    -statut: StatutAppro
+    -fournisseurId: int
+    -fournisseur: ?Fournisseur
+    -userId: int
+    -agentStock: ?User
+    -lignes: LigneApprovisionnement[*]
+    +getId(): int
+    +getNumeroBL(): string
+    +getDateAppro(): DateTime
+    +getMontantTotal(): float
+    +getStatut(): StatutAppro
+    +getFournisseur(): ?Fournisseur
+    +getLignes(): LigneApprovisionnement[*]
+    +ajouterLigne(ligne: LigneApprovisionnement): void
+    +calculerTotal(): float
+}
+
+class LigneApprovisionnement {
+    -id: int
+    -approvisionnementId: int
+    -produitId: int
+    -produit: ?Produit
+    -quantite: int
+    -prixAchatUnitaire: float
+    +getId(): int
+    +getProduitId(): int
+    +getProduit(): ?Produit
+    +getQuantite(): int
+    +getPrixAchatUnitaire(): float
+    +calculerSousTotal(): float
+}
+
+' ==========================================
+' RELATIONS ET ASSOCIATIONS
+' ==========================================
+User "1" --> "1" Role : possede
+User "1" --> "0..*" Vente : enregistre
+User "1" --> "0..*" Paiement : encaisse
+User "1" --> "0..*" Approvisionnement : receptionne
+
+Produit "0..*" --> "0..1" Categorie : classe dans
+
+Client "1" --> "0..*" Vente : commande
+Client "1" --> "0..*" Dette : est debiteur de
+
+Vente "1" *-- "1..*" LigneVente : compose de
+LigneVente "0..*" --> "1" Produit : reference
+
+Vente "1" --> "0..1" Dette : genere
+Dette "1" *-- "0..*" Paiement : reglee par
+Dette "1" --> "1" StatutDette : possede statut
+
+Fournisseur "1" --> "0..*" Approvisionnement : approvisionne
+Approvisionnement "1" *-- "1..*" LigneApprovisionnement : compose de
+Approvisionnement "1" --> "1" StatutAppro : possede statut
+LigneApprovisionnement "0..*" --> "1" Produit : reference
+
+Vente "1" --> "1" ModePaiement : regle par
+Paiement "1" --> "1" ModePaiement : regle par
+
+@enduml
