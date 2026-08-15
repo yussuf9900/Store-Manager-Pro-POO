@@ -314,24 +314,7 @@ class POSController
                 return;
             }
 
-            $this->redirect('/pos');
         }
-    }
-
-    public function facture(int $id): void
-    {
-        SessionManager::start();
-
-        $vente = $this->venteService->getVente($id);
-        if (!$vente) {
-            SessionManager::setFlash('error', "La facture demandée (ID #{$id}) est introuvable.");
-            $this->redirect('/pos');
-            return;
-        }
-
-        $this->render('pos/facture', [
-            'vente' => $vente
-        ]);
     }
 
     private function getModesPaiement(): array
@@ -381,15 +364,12 @@ class POSController
     {
         extract($data);
 
-        $rootViewsDir = dirname(__DIR__, 2) . '/views/' . $viewPath . '.php';
-        $srcViewsDir = dirname(__DIR__) . '/view/' . $viewPath . '.php';
+        $viewFile = dirname(__DIR__) . '/views/' . $viewPath . '.php';
 
-        if (file_exists($rootViewsDir)) {
-            require $rootViewsDir;
-        } elseif (file_exists($srcViewsDir)) {
-            require $srcViewsDir;
+        if (file_exists($viewFile)) {
+            require $viewFile;
         } else {
-            echo "Erreur : La vue '{$viewPath}' est introuvable (recherché dans: {$rootViewsDir}).";
+            echo "Erreur : La vue '{$viewPath}' est introuvable (recherché dans: {$viewFile}).";
         }
     }
 }
