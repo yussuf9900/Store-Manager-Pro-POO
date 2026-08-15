@@ -227,3 +227,79 @@
   - *Immutabilité des invariants financiers* : Les méthodes `ajouterDette()` et `retirerStock()` interdisent formellement les états invalides (stock négatif, crédit supérieur au plafond autorisé) en levant explicitement des `InvalidArgumentException`.
 
 ---
+
+#### 📌 Step 2.2 (11h00 - 13h00) : Repositories, Router, SessionManager & SQL Sécurisé PDO
+
+- **Heure de réalisation** : 11h00 - 13h00
+- **Ce qui a été fait** :
+
+  1. **Architecture de la Couche d'Accès aux Données (Repository Pattern & Abstraction)** :
+     - Création de `src/Model/Repository/RepositoryInterface.php` définissant le contrat générique de persistance (`findById`, `findAll`, `delete`, `count`).
+     - Création de `src/Model/Repository/AbstractRepository.php` encapsulant la connexion PDO via `Database::getPDO()` et imposant l'implémentation de la méthode d'hydratation objet `hydrate(array $row): object`.
+     - Découplage strict entre la représentation relationnelle SQL (tuples) et les objets du domaine métier POO (`Produit`, `Client`, `Fournisseur`, `Categorie`).
+
+  2. **Implémentation des Classes Repository avec Requêtes Préparées PDO Strictes** :
+     - **`ProduitRepository`** (`src/Model/Repository/ProduitRepository.php`) :
+       - `findById(int $id): ?Produit` et `findByCode(string $code): ?Produit` avec jointure `LEFT JOIN categories` pour hydrater directement l'objet `Categorie` associé.
+       - `findAll(): array` et `findByCategorie(int $categorieId): array`.
+       - `findEnAlerteStock(): array` : Requête de détection proactive des articles sous seuil d'alerte (`qte_stock <= seuil_alerte`).
+       - `search(string $term): array` : Recherche plein texte multi-colonnes insensible à la casse (`code`, `libelle`, `description`).
+       - `save(Produit $produit): bool` : Gestion automatique de l'insertion (`INSERT` + récupération de `lastInsertId`) ou de la mise à jour (`UPDATE`).
+       - Opérations atomiques sécurisées :
+         - `decrementStock(int $id, int $quantite): bool` : Décrémentation atomique sous condition `qte_stock >= :qte` (sécurité absolue contre les surventes et les stocks négatifs).
+         - `incrementStock(int $id, int $quantite): bool` : Incrémentation atomique lors des réceptions de marchandises.
+         - `updateStock(int $id, int $nouvelleQte): bool` et `delete(int $id): bool`.
+     - **`ClientRepository`** (`src/Model/Repository/ClientRepository.php`) :
+       - `findById(int $id): ?Client` et `findByTelephone(string $telephone): ?Client`.
+       - `findAll(): array` et `search(string $term): array`.
+       - `findClientsAvecDettes(): array` : Récupération des clients ayant un encours de dette actif (`total_dettes_actuelles > 0`) triés par risque décroissant.
+       - `findSolvablesPourCredit(float $montant): array` : Filtrage SQL des comptes éligibles à un nouveau crédit (`(limite_credit - total_dettes_actuelles) >= :montant`).
+       - `save(Client $client): bool` (Insert / Update avec hydratation de l'identifiant généré).
+       - `ajouterDette(int $id, float $montant): bool` : Incrémentation atomique de la dette avec vérification du plafond (`(total_dettes_actuelles + :montant) <= limite_credit`).
+       - `diminuerDette(int $id, float $montant): bool` : Décrémentation atomique de la dette lors d'un versement.
+       - `getTotalCreances(): float` : Agrégation SQL (`SUM`) du montant global des dettes en circulation.
+     - **`FournisseurRepository`** (`src/Model/Repository/FournisseurRepository.php`) :
+       - `findById(int $id): ?Fournisseur`, `findByTelephone(string $telephone): ?Fournisseur`, `findAll(): array`, `search(string $term): array`, `save(Fournisseur $fournisseur): bool`, `delete(int $id): bool`.
+     - **`CategorieRepository`** (`src/Model/Repository/CategorieRepository.php`) :
+       - Gestion du référentiel des catégories d'articles (`findById`, `findByCode`, `findAll`, `save`, `delete`).
+
+  3. **Composants Core d'Infrastructure (`Router.php` & `SessionManager.php`)** :
+     - **`Router`** (`src/Core/Router.php`) :
+       - Moteur de routage HTTP POO fluide supportant les méthodes `GET` et `POST`.
+       - Prise en charge des signatures `$router->get('/path', 'MonController', 'action')`, `$router->get('/path', [Controller::class, 'action'])` et `$router->get('/path', fn() => ...)`.
+       - Résolution et extraction automatique des paramètres dynamiques d'URL via expressions régulières (ex: `/articles/{id}`).
+       - Résolution automatique des contrôleurs dans l'espace de noms `App\Controller\`.
+       - Gestionnaire 404 configurable et méthodes utilitaires de réponse `Router::redirect()` et `Router::json()`.
+     - **`SessionManager`** (`src/Core/SessionManager.php`) :
+       - Démarrage sécurisé (`session_start` avec cookies `httponly`, `samesite=Lax`, `use_strict_mode`).
+       - Encapsulation des lectures/écritures de session (`get`, `set`, `has`, `remove`, `clear`, `destroy`).
+       - Protection contre la fixation de session via `regenerateId()`.
+       - Système de notifications éphémères (Flash Messages : `setFlash`, `getFlash`, `hasFlash`, `getFlashes`).
+       - Gestion de l'état utilisateur authentifié (`setUser`, `getUser`, `isLoggedIn`, `logout`).
+
+  4. **Front Controller Minimaliste & Respect de la Chaîne MVC (`public/index.php`)** :
+     - Rôle unique et ciblé de `public/index.php` comme point d'entrée reliant l'environnement au composant `Router` :
+       - Autoloading PSR-4 (`vendor/autoload.php`) et imports de namespaces (`use App\Core\Router;`, `use App\Core\SessionManager;`).
+       - Démarrage de session (`SessionManager::start()`).
+       - Instanciation et exécution du routeur (`$router = new Router(); $router->dispatch();`).
+     - Respect strict de la chaîne de responsabilité MVC : `Index -> Router -> Controller -> Models/Repositories & Views`.
+
+  5. **Suite de Tests Automatisés (`tests/test_repositories.php`)** :
+     - Conception et exécution d'une batterie de tests couvrant 45 assertions :
+       - Tests SessionManager (persistance, suppression, flash messages, logout).
+       - Tests Router (routes statiques, placeholders dynamiques, 404).
+       - Tests CategorieRepository (CRUD, recherche par code).
+       - Tests ProduitRepository (CRUD, recherche multi-mots, filtres alertes, décrémentation/incrémentation atomique).
+       - Tests ClientRepository (CRUD, recherche, calcul des créances, blocage si dépassement de plafond de crédit, remboursement).
+       - Tests FournisseurRepository (CRUD, recherche téléphone/nom).
+     - **Résultat : 45/45 tests validés avec succès (0 échec)**.
+
+- **Difficultés / Obstacles & Solutions** :
+  - *Portabilité et atomicité des décrémentations de stock* : Pour éviter les problèmes d'accès concurrents (Race Conditions) lors de ventes simultanées, la décrémentation est exécutée directement en une seule requête SQL atomique avec clause conditionnelle `WHERE id = :id AND qte_stock >= :qte`. Si le stock est insuffisant, `rowCount()` retourne 0 sans altérer la base.
+  - *Cohérence des jointures et typage strict* : L'hydratation des produits instancie simultanément l'objet `Categorie` parent via le résultat du `LEFT JOIN`, assurant la complétude du graphe d'objets en mémoire sans requête N+1 supplémentaire.
+  - *Autoloading PSR-4 et Namespaces propres* : L'utilisation exclusive de l'autoloading PSR-4 et des déclarations `use` dans `public/index.php` supprime les longues listes de `require_once`, assurant une structure propre, modulaire et maintenable.
+  - *Architecture épurée du Router* : Le `Router.php` a été condensé à moins de 50 lignes lisibles, tout en supportant les contrôleurs avec méthodes, les closures, les paramètres dynamiques `{id}` et la gestion 404.
+
+---
+
+

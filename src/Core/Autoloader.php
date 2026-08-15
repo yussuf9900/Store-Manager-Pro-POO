@@ -2,16 +2,10 @@
 
 namespace App\Core;
 
-/**
- * Autoloader PSR-4 natif pour l'application StoreManager Pro
- */
 class Autoloader
 {
     private static bool $registered = false;
 
-    /**
-     * Enregistre l'autoloader PSR-4 auprès du moteur PHP
-     */
     public static function register(): void
     {
         if (self::$registered) {
@@ -22,9 +16,6 @@ class Autoloader
         self::$registered = true;
     }
 
-    /**
-     * Résout et inclut le fichier de classe correspondant à un nom qualifié
-     */
     public static function autoload(string $className): void
     {
         $prefix = 'App\\';

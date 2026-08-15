@@ -1,0 +1,65 @@
+<?php
+
+namespace App\Core;
+
+class Router
+{
+    private array $routes = [];
+
+    public function get(string $path, string|callable $controller, ?string $action = null): void
+    {
+        $this->add('GET', $path, $controller, $action);
+    }
+
+    public function post(string $path, string|callable $controller, ?string $action = null): void
+    {
+        $this->add('POST', $path, $controller, $action);
+    }
+
+    public function add(string $method, string $path, string|callable $controller, ?string $action = null): void
+    {
+        $this->routes[] = [
+            'method' => strtoupper($method),
+            'path' => rtrim($path, '/') ?: '/',
+            'controller' => $controller,
+            'action' => $action
+        ];
+    }
+
+    public function dispatch(?string $method = null, ?string $uri = null): mixed
+    {
+        $requestMethod = strtoupper($method ?? $_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $requestUri = rtrim(parse_url($uri ?? $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/') ?: '/';
+
+        foreach ($this->routes as $route) {
+            if ($route['method'] !== $requestMethod) {
+                continue;
+            }
+
+            $pattern = preg_replace('/\{[a-zA-Z0-9_]+\}/', '([^/]+)', $route['path']);
+            if (preg_match('#^' . $pattern . '$#', $requestUri, $matches)) {
+                array_shift($matches);
+
+                if (is_callable($route['controller'])) {
+                    return call_user_func_array($route['controller'], $matches);
+                }
+
+                $controllerClass = $route['controller'];
+                if (!class_exists($controllerClass)) {
+                    $controllerClass = 'App\\Controller\\' . $controllerClass;
+                }
+
+                $controller = new $controllerClass();
+                $action = $route['action'] ?? 'index';
+
+                return call_user_func_array([$controller, $action], $matches);
+            }
+        }
+
+        if (!headers_sent()) {
+            http_response_code(404);
+        }
+        echo "404 - Page non trouvée";
+        return null;
+    }
+}
