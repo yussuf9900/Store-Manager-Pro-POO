@@ -302,4 +302,55 @@
 
 ---
 
+#### 📌 Step 2.3 (14h00 - 17h00) : Service Métier Vente POS & Transaction SQL
+
+- **Heure de réalisation** : 14h00 - 17h00
+- **Ce qui a été fait** :
+
+  1. **Calculs & Préparation Métier du Panier** :
+     - Implémentation des opérations de calcul dans `src/Service/VenteService.php` :
+       - `calculerTotauxPanier(array $articles): array` : Calcule le total brut, le total des remises, le montant net à payer, le nombre total d'unités physiques et le nombre de références distinctes de manière purement agnostique de la session HTTP.
+       - `preparerLigneArticle(int|string $produitIdOuCode, int $quantite = 1, float $remise = 0.0): array` : Recherche l'article par identifiant ou code, vérifie la disponibilité du stock physique et calcule le sous-total ligne avec remise.
+
+  2. **Couche de Consultation & Statistiques Financières Intégrée** :
+     - Méthodes `getVente(int $id): ?Vente` et `getVenteByFacture(string $num): ?Vente` avec requêtes préparées et hydratation complète (`LigneVente[]`, `Client`, `User`, `ModePaiement`).
+     - Méthodes `getVentesDuJour(?DateTime $date)` et `getVentesClient(int $clientId)`.
+     - Méthode `getStatistiquesDuJour()` calculant le CA du jour, le total encaissé cash/mobile money, le montant des crédits accordés et le panier moyen journalier.
+
+  3. **Validation Transactionnelle Atomique sous PDO (`VenteService::validerVente()`)** :
+     - **Contrôles préalables stricts** :
+       - Vérification que le panier n'est pas vide (`InvalidArgumentException`).
+       - Vérification de l'existence et du stock de chaque produit (`RuntimeException`).
+       - Calcul du montant total net, du montant réglé et du solde restant dû (`montantRestant = max(0, total - montantPaye)`).
+     - **Contrôle du risque client & invariance de solvabilité** :
+       - Si la vente est à crédit (`montantRestant > 0` ou `modePaiementId = 5 DETTE`), vérification obligatoire de la présence d'un client.
+       - Vérification de la règle d'invariance financière : `(total_dettes_actuelles + montantRestant) <= limite_credit`.
+       - En cas de dépassement : levée immédiate d'une exception avec message détaillé indiquant la limite, l'encours et le disponible restant.
+     - **Exécution transactionnelle atomique (`beginTransaction` / `commit` / `rollBack`)** :
+       - Génération d'un numéro de facture unique au format `FACT-YYYYMMDD-XXXXXX`.
+       - Insertion de l'en-tête de vente dans `ventes` via requête préparée PDO.
+       - Pour chaque ligne : insertion dans `lignes_vente` et décrémentation atomique de stock sous condition SQL `UPDATE produits SET qte_stock = qte_stock - :qte WHERE id = :id AND qte_stock >= :qte`. Si `rowCount === 0`, levée d'une exception de rupture concurrente pour annuler la transaction.
+       - Si vente à crédit : insertion de la créance dans `dettes` (`statut_id = 1 NON_SOLDEE`), mise à jour atomique de l'encours client dans `clients` (`total_dettes_actuelles = total_dettes_actuelles + :reste`), et historisation d'un éventuel acompte initial dans `paiements`.
+       - Validation finale par `commit()`.
+       - Sécurisation absolue sous bloc `try / catch (\Throwable $e)` : exécution systématique de `rollBack()` si une transaction est active, garantissant zéro corruption de stock ou de données financières.
+
+  4. **Suite de Tests Automatisés Complète (`tests/test_vente_service.php`)** :
+     - Conception et exécution d'une batterie de tests couvrant **57 assertions critiques** :
+       - Tests des calculs et préparations d'articles (ID/Code, remises, sous-totaux, détection de stock insuffisant).
+       - Tests de vente au comptant (numéro de facture, totaux, décrémentation stock en BDD).
+       - Tests des garde-fous (panier vide, client obligatoire pour vente à crédit).
+       - Tests de vente à crédit autorisée (création dette `NON_SOLDEE`, augmentation de l'encours client, décrémentation stock).
+       - Tests de blocage strict lors d'un dépassement de plafond de crédit et **vérification du ROLLBACK PDO** (aucun stock débité, aucun encours altéré, aucune vente fantôme insérée).
+       - Tests de vente à crédit avec acompte partiel (historisation de l'acompte dans la table `paiements`).
+       - Tests des méthodes de consultation et des indicateurs statistiques journaliers (CA, encaissé, crédit, panier moyen).
+     - **Résultat : 57/57 tests validés avec succès (0 échec)**.
+
+- **Difficultés / Obstacles & Solutions d'Architecture** :
+  - *Purification du Service Métier* : Suppression complète de toute dépendance à la Session HTTP dans le Service. Le Service traite des données pures, laissant au futur contrôleur (`POSController`) la responsabilité de la session utilisateur.
+  - *Protection contre les Race Conditions sur les stocks* : L'utilisation conjointe de la clause `WHERE qte_stock >= :qte` et du contrôle de `rowCount() > 0` au sein d'une transaction PDO garantit une étanchéité totale contre les surventes même en cas d'accès concurrents simultanés.
+  - *Atomicité multitable & Intégrité financière* : L'encadrement dans une transaction PDO unifiée garantit que l'ensemble des opérations (`ventes`, `lignes_vente`, `produits`, `dettes`, `clients`, `paiements`) réussit de manière indivisible ou est intégralement annulé en cas d'incident (`rollBack()`).
+
+---
+
+
 
