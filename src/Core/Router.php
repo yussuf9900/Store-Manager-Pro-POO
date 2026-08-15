@@ -17,7 +17,6 @@ class Router
         $this->match(['GET', 'POST'], '/pos/supprimer', POSController::class, 'supprimerArticle');
         $this->match(['GET', 'POST'], '/pos/vider', POSController::class, 'viderPanier');
         $this->match(['GET', 'POST'], '/pos/valider', POSController::class, 'validerVente');
-        $this->get('/pos/facture/{id}', POSController::class, 'facture');
     }
 
     public function get(string $path, string|callable $controller, ?string $action = null): void

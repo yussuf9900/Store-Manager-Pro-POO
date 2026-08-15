@@ -366,7 +366,7 @@
        - `validerVente()` (`POST /pos/valider`) : Traite la soumission de commande, extrait les données de paiement, coordonne `VenteService::validerVente()`, purge le panier de session, mémorise la facture pour impression et gère les messages flash de confirmation / erreur.
        - `facture(int $id)` (`GET /pos/facture/{id}`) : Rendu du ticket de caisse thermique autonome.
 
-  2. **Interface Tactile Ergonomique de Caisse (`views/pos/index.php`)** :
+  2. **Interface Tactile Ergonomique de Caisse (`src/views/pos/index.php`)** :
      - Conception d'une interface POS split-screen haut de gamme aux teintes Dark Navy / Teal (`#0b0f19`, `#161e31`, `#2dd4bf`) :
        - **En-tête & KPIs en direct** : CA du jour, total encaissé, créances générées et nombre de tickets émis.
        - **Catalogue Produits Tactile & Live Search** : Barre de recherche instantanée par nom ou code-barres (raccourci `[F2]`), filtres par catégories avec compteur d'articles, cartes de produits avec badges de stock en temps réel (vert > seuil, jaune $\le$ alerte, rouge épuisé).
@@ -383,19 +383,19 @@
      - **Résultat : 24/24 tests validés avec succès (0 échec)**.
 
   5. **Découpage Modulaire Structuré du Prototype (`storemanager_pro_app.html`)** :
-     - Éclatement chirurgical du prototype monolithique en composants PHP réutilisables et vues d'écrans par acteur dans le répertoire `views/` :
+     - Éclatement chirurgical du prototype monolithique en composants PHP réutilisables et vues d'écrans par acteur dans le répertoire `src/views/` :
        - **Layouts Communs** :
-         - `views/layout/header.php` : Doctype, balises meta, police Google Font *Plus Jakarta Sans*, variables CSS et styles globaux.
-         - `views/layout/navbar.php` : Barre de navigation supérieure avec onglets de permissions selon le rôle actif de l'utilisateur.
-         - `views/layout/toast.php` : Composant de notifications flash dynamiques (Succès / Erreurs).
-         - `views/layout/footer.php` : Scripts JS utilitaires globaux (pagination, formatage, toasts) et balises fermantes.
+         - `src/views/layout/header.php` : Doctype, balises meta, police Google Font *Plus Jakarta Sans*, variables CSS et styles globaux.
+         - `src/views/layout/navbar.php` : Barre de navigation supérieure avec onglets de permissions selon le rôle actif de l'utilisateur.
+         - `src/views/layout/toast.php` : Composant de notifications flash dynamiques (Succès / Erreurs).
+         - `src/views/layout/footer.php` : Scripts JS utilitaires globaux (pagination, formatage, toasts) et balises fermantes.
        - **Vues Métiers Dédiées** :
-         - `views/auth/login.php` : Écran d'authentification split-screen avec sélecteur direct de rôles de démonstration.
-         - `views/dashboard/index.php` : Tableau de bord administratif avec KPIs globaux, graphiques SVG et alertes de stock.
-         - `views/pos/index.php` : Console de caisse tactile connectée au panier et aux clients.
-         - `views/dettes/index.php` : Registre des créances actives avec modale de versement partiel et solde complet.
-         - `views/approvisionnements/index.php` : Registre des réceptions fournisseurs avec modale de saisie de Bon de Livraison (BL).
-         - `views/catalogue/index.php` : Gestion des répertoires produits, clients (avec plafonds de crédit) et fournisseurs.
+         - `src/views/auth/login.php` : Écran d'authentification split-screen avec sélecteur direct de rôles de démonstration.
+         - `src/views/dashboard/index.php` : Tableau de bord administratif avec KPIs globaux, graphiques SVG et alertes de stock.
+         - `src/views/pos/index.php` : Console de caisse tactile connectée au panier et aux clients.
+         - `src/views/dettes/index.php` : Registre des créances actives avec modale de versement partiel et solde complet.
+         - `src/views/approvisionnements/index.php` : Registre des réceptions fournisseurs avec modale de saisie de Bon de Livraison (BL).
+         - `src/views/catalogue/index.php` : Gestion des répertoires produits, clients (avec plafonds de crédit) et fournisseurs.
 
   6. **Suite de Tests de Non-Régression des Vues (`tests/test_views.php`)** :
      - Vérification de l'instanciation et du rendu HTML de chaque vue découpée sans notice ni warning PHP.
