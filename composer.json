@@ -1,0 +1,13 @@
+{
+    "name": "yussuf9900/storemanager-pro",
+    "description": "StoreManager Pro - Application ERP / POS en PHP POO",
+    "type": "project",
+    "require": {
+        "php": ">=8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    }
+}
