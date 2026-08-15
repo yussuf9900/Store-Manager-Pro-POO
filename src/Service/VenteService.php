@@ -33,10 +33,6 @@ class VenteService
         $this->clientRepository = $clientRepository ?? new ClientRepository();
     }
 
-    /* =========================================================================
-     * 1. CALCULS & PRÉPARATION MÉTIER DU PANIER
-     * ========================================================================= */
-
     public function calculerTotauxPanier(array $articles): array
     {
         $totalBrut = 0.0;
@@ -109,10 +105,6 @@ class VenteService
         ];
     }
 
-    /* =========================================================================
-     * 2. VALIDATION DE VENTE & TRANSACTION SQL PDO
-     * ========================================================================= */
-
     public function validerVente(
         int $userId,
         ?int $clientId = null,
@@ -121,12 +113,10 @@ class VenteService
         array $articles = [],
         ?DateTime $dateEcheance = null
     ): Vente {
-        // 1. Vérification panier non vide
         if (empty($articles)) {
             throw new InvalidArgumentException("Impossible de valider la transaction : le panier de vente est vide.");
         }
 
-        // 2. Vérification préliminaire des articles et calculs financiers
         $lignesPreparees = [];
         $montantTotalCalcule = 0.0;
 
@@ -173,19 +163,16 @@ class VenteService
             ];
         }
 
-        // 3. Traitement des montants et modes de règlement
-        $isVenteDette = ($modePaiementId === 5); // 5 = DETTE
+        $isVenteDette = ($modePaiementId === 5);
         $montantPaye = max(0.0, $montantPaye);
 
         if (!$isVenteDette && $montantPaye <= 0.0) {
-            // Pour les ventes comptant (Espèces, Wave, OM, Carte), paiement complet par défaut
             $montantPaye = $montantTotalCalcule;
         }
 
         $montantRestant = max(0.0, $montantTotalCalcule - $montantPaye);
         $estACredit = ($montantRestant > 0 || $isVenteDette);
 
-        // 4. Contrôle strict du risque client et du plafond de crédit
         $client = null;
         if ($estACredit) {
             if ($clientId === null || $clientId <= 0) {
@@ -214,15 +201,12 @@ class VenteService
             $client = $this->clientRepository->findById($clientId);
         }
 
-        // 5. Exécution sous Transaction SQL PDO Atomique
         $pdo = Database::getPDO();
         $pdo->beginTransaction();
 
         try {
-            // A. Génération du numéro de facture unique
             $numeroFacture = $this->genererNumeroFacture();
 
-            // B. Insertion de la vente principale
             $dateVenteStr = (new DateTime())->format('Y-m-d H:i:s');
             $stmtVente = $pdo->prepare(
                 "INSERT INTO ventes (numero_facture, date_vente, montant_total, montant_paye, montant_restant, mode_paiement_id, statut, client_id, user_id)
@@ -241,7 +225,6 @@ class VenteService
 
             $venteId = (int)$pdo->lastInsertId();
 
-            // C. Insertion des lignes et Décrémentation Atomique de Stock
             $stmtLigne = $pdo->prepare(
                 "INSERT INTO lignes_vente (vente_id, produit_id, quantite, prix_unitaire, remise, sous_total)
                  VALUES (:vente_id, :produit_id, :quantite, :prix_unitaire, :remise, :sous_total)"
@@ -252,7 +235,6 @@ class VenteService
             );
 
             foreach ($lignesPreparees as $ligne) {
-                // Enregistrement de la ligne de vente
                 $stmtLigne->bindValue(':vente_id', $venteId, PDO::PARAM_INT);
                 $stmtLigne->bindValue(':produit_id', $ligne['produit_id'], PDO::PARAM_INT);
                 $stmtLigne->bindValue(':quantite', $ligne['quantite'], PDO::PARAM_INT);
@@ -261,7 +243,6 @@ class VenteService
                 $stmtLigne->bindValue(':sous_total', $ligne['sous_total']);
                 $stmtLigne->execute();
 
-                // Décrémentation atomique
                 $stmtDecStock->bindValue(':qte', $ligne['quantite'], PDO::PARAM_INT);
                 $stmtDecStock->bindValue(':id', $ligne['produit_id'], PDO::PARAM_INT);
                 $stmtDecStock->execute();
@@ -273,7 +254,6 @@ class VenteService
                 }
             }
 
-            // D. Traitement de la dette et mise à jour client si vente à crédit
             if ($estACredit && $montantRestant > 0 && $clientId !== null) {
                 $echeance = $dateEcheance ?? (new DateTime())->modify('+30 days');
 
@@ -287,12 +267,11 @@ class VenteService
                 $stmtDette->bindValue(':montant_restant', $montantRestant);
                 $stmtDette->bindValue(':date_creation', $dateVenteStr, PDO::PARAM_STR);
                 $stmtDette->bindValue(':date_echeance', $echeance->format('Y-m-d H:i:s'), PDO::PARAM_STR);
-                $stmtDette->bindValue(':statut_id', 1, PDO::PARAM_INT); // 1 = NON_SOLDEE
+                $stmtDette->bindValue(':statut_id', 1, PDO::PARAM_INT);
                 $stmtDette->execute();
 
                 $detteId = (int)$pdo->lastInsertId();
 
-                // Mise à jour de l'encours de dette client
                 $stmtClient = $pdo->prepare(
                     "UPDATE clients SET total_dettes_actuelles = total_dettes_actuelles + :montant WHERE id = :id"
                 );
@@ -300,7 +279,6 @@ class VenteService
                 $stmtClient->bindValue(':id', $clientId, PDO::PARAM_INT);
                 $stmtClient->execute();
 
-                // Si un acompte initial a été versé, l'enregistrer dans l'historique des paiements
                 if ($montantPaye > 0) {
                     $stmtPaiement = $pdo->prepare(
                         "INSERT INTO paiements (dette_id, montant, date_paiement, mode_paiement_id, reference_paiement, user_id)
@@ -316,10 +294,8 @@ class VenteService
                 }
             }
 
-            // E. Validation finale de la transaction
             $pdo->commit();
 
-            // Recharger et retourner l'objet Vente complet
             return $this->getVente($venteId);
 
         } catch (Throwable $e) {
@@ -329,10 +305,6 @@ class VenteService
             throw $e;
         }
     }
-
-    /* =========================================================================
-     * 3. CONSULTATION & STATISTIQUES
-     * ========================================================================= */
 
     public function getVente(int $id): ?Vente
     {
@@ -414,10 +386,6 @@ class VenteService
             'panier_moyen' => round((float)($row['panier_moyen'] ?? 0.0), 2)
         ];
     }
-
-    /* =========================================================================
-     * 4. MÉTHODES D'HYDRATATION & REQUÊTES INTERNES
-     * ========================================================================= */
 
     private function getBaseSelect(): string
     {

@@ -1,4 +1,4 @@
-# 📓 Journal de Développement (DEVLOG)
+# Journal de Développement (DEVLOG)
 **Nom & Prénom** : Youssou SALL  
 **Projet** : StoreManager Pro (ERP PHP/POO)  
 
@@ -6,11 +6,11 @@
 
 ## 1. Suivi Chronologique des Phases
 
-### 🌃 [Vendredi - Phase 1] : Conception & BDD Fallback
+### [Vendredi - Phase 1] : Conception & BDD Fallback
 
 ---
 
-#### 📌 Step 1.1 (19h00 - 20h30) : Conception & Modélisation UML (Use Cases & Diagramme de Classes POO)
+#### Step 1.1 (19h00 - 20h30) : Conception & Modélisation UML (Use Cases & Diagramme de Classes POO)
 
 - **Heure de réalisation** : 19h00 - 20h30
 - **Ce qui a été fait** :
@@ -21,10 +21,10 @@
 
   2. **Matrice de Ségrégation des Responsabilités & Rôles (RBAC)** :
      - Formalisation de 4 profils utilisateurs distincts aux périmètres fonctionnels hermétiques :
-       - **👑 Admin Boutique (`ADMIN`)** : Contrôle absolu sur l'ensemble de l'ERP (visualisation des KPIs financiers globaux sur le Dashboard, gestion des comptes utilisateurs et attribution des rôles, paramétrage général du catalogue, des clients, des fournisseurs et clôture comptable).
-       - **🛒 Chargé de Vente (`VENTE`)** : Opérateur dédié au point de vente (caisse POS tactile). Il recherche les articles (par code-barres ou libellé), gère le panier, applique les remises, valide les encaissements et dispose du droit exclusif de consulter le registre des créances pour enregistrer des remboursements de dettes.
-       - **📦 Chargé de Stock (`STOCK`)** : Responsable logistique amont. Il réceptionne les marchandises fournisseurs sous Bon de Livraison (BL), saisit les quantités reçues et prix d'achat, incrémente le stock physique et gère le catalogue produits et fournisseurs. Il n'a aucun accès aux fonctions d'encaissement de caisse ni aux créances clients.
-       - **📋 Inventaire (`INVENTAIRE`)** : Rôle d'audit et de contrôle périodique. Il accède en mode consultation et comptage physique aux répertoires des articles et des tiers, sans possibilité d'altérer les données financières, de modifier les prix ou d'effectuer des ventes.
+       - **Admin Boutique (`ADMIN`)** : Contrôle absolu sur l'ensemble de l'ERP (visualisation des KPIs financiers globaux sur le Dashboard, gestion des comptes utilisateurs et attribution des rôles, paramétrage général du catalogue, des clients, des fournisseurs et clôture comptable).
+       - **Chargé de Vente (`VENTE`)** : Opérateur dédié au point de vente (caisse POS tactile). Il recherche les articles (par code-barres ou libellé), gère le panier, applique les remises, valide les encaissements et dispose du droit exclusif de consulter le registre des créances pour enregistrer des remboursements de dettes.
+       - **Chargé de Stock (`STOCK`)** : Responsable logistique amont. Il réceptionne les marchandises fournisseurs sous Bon de Livraison (BL), saisit les quantités reçues et prix d'achat, incrémente le stock physique et gère le catalogue produits et fournisseurs. Il n'a aucun accès aux fonctions d'encaissement de caisse ni aux créances clients.
+       - **Inventaire (`INVENTAIRE`)** : Rôle d'audit et de contrôle périodique. Il accède en mode consultation et comptage physique aux répertoires des articles et des tiers, sans possibilité d'altérer les données financières, de modifier les prix ou d'effectuer des ventes.
 
   3. **Modélisation du Diagramme de Cas d'Utilisation (`docs/use_cases.puml`)** :
      - Structuration modulaire en 6 packages fonctionnels : *Authentification & Profils*, *Caisse POS & Ventes*, *Gestion des Dettes & Règlements*, *Approvisionnements & Réception BL*, *Catalogue & Répertoires Tiers*, *Dashboard & Pilotage*.
@@ -72,7 +72,7 @@
 
 ---
 
-#### 📌 Step 1.2 (20h30 - 22h00) : Schéma SQL Relationnel (PostgreSQL & SQLite)
+#### Step 1.2 (20h30 - 22h00) : Schéma SQL Relationnel (PostgreSQL & SQLite)
 
 - **Heure de réalisation** : 20h30 - 22h00
 - **Ce qui a été fait** :
@@ -143,7 +143,7 @@
 
 ---
 
-#### 📌 Step 1.3 (22h00 - 23h00) : Singleton Database & Fallback Automatique
+#### Step 1.3 (22h00 - 23h00) : Singleton Database & Fallback Automatique
 
 - **Heure de réalisation** : 22h00 - 23h00
 - **Ce qui a été fait** :
@@ -176,11 +176,11 @@
 
 ---
 
-### ☀️ [Samedi - Phase 2] : POO, Repositories & Ventes POS
+### [Samedi - Phase 2] : POO, Repositories & Ventes POS
 
 ---
 
-#### 📌 Step 2.1 (09h00 - 11h00) : Entités POO Pures & Logique Métier
+#### Step 2.1 (09h00 - 11h00) : Entités POO Pures & Logique Métier
 
 - **Heure de réalisation** : 09h00 - 11h00
 - **Ce qui a été fait** :
@@ -228,7 +228,7 @@
 
 ---
 
-#### 📌 Step 2.2 (11h00 - 13h00) : Repositories, Router, SessionManager & SQL Sécurisé PDO
+#### Step 2.2 (11h00 - 13h00) : Repositories, Router, SessionManager & SQL Sécurisé PDO
 
 - **Heure de réalisation** : 11h00 - 13h00
 - **Ce qui a été fait** :
@@ -302,7 +302,7 @@
 
 ---
 
-#### 📌 Step 2.3 (14h00 - 17h00) : Service Métier Vente POS & Transaction SQL
+#### Step 2.3 (14h00 - 17h00) : Service Métier Vente POS & Transaction SQL
 
 - **Heure de réalisation** : 14h00 - 17h00
 - **Ce qui a été fait** :
@@ -346,11 +346,68 @@
      - **Résultat : 57/57 tests validés avec succès (0 échec)**.
 
 - **Difficultés / Obstacles & Solutions d'Architecture** :
-  - *Purification du Service Métier* : Suppression complète de toute dépendance à la Session HTTP dans le Service. Le Service traite des données pures, laissant au futur contrôleur (`POSController`) la responsabilité de la session utilisateur.
+  - *Purification du Service Métier* : Suppression complète de toute dépendance à la Session HTTP dans le Service. Le Service traite des données pures, laissant au contrôleur (`POSController`) la responsabilité de la session utilisateur.
   - *Protection contre les Race Conditions sur les stocks* : L'utilisation conjointe de la clause `WHERE qte_stock >= :qte` et du contrôle de `rowCount() > 0` au sein d'une transaction PDO garantit une étanchéité totale contre les surventes même en cas d'accès concurrents simultanés.
   - *Atomicité multitable & Intégrité financière* : L'encadrement dans une transaction PDO unifiée garantit que l'ensemble des opérations (`ventes`, `lignes_vente`, `produits`, `dettes`, `clients`, `paiements`) réussit de manière indivisible ou est intégralement annulé en cas d'incident (`rollBack()`).
 
 ---
 
+#### Step 2.4 (17h00 - 20h00) : Controller POS & Vue Caisse
 
+- **Heure de réalisation** : 17h00 - 20h00
+- **Ce qui a été fait** :
 
+  1. **Contrôleur Web POS (`src/Controller/POSController.php`)** :
+     - Implémentation complète de la couche contrôleur selon le pattern MVC :
+       - `index()` : Récupère le panier en session (`SessionManager`), les catégories, produits, clients avec encours, modes de paiement actifs et statistiques de vente journalières pour les injecter dans la vue.
+       - `ajouterArticle()` (`POST /pos/ajouter`) : Valide les entrées, appelle `VenteService::preparerLigneArticle()` pour contrôler le stock en temps réel, stocke dans la session `pos_cart` et renvoie une réponse adaptée (redirection HTTP ou JSON asynchrone AJAX).
+       - `modifierQuantite()` (`POST /pos/quantite`) : Ajuste la quantité d'un article ou le supprime si $\le 0$.
+       - `supprimerArticle()` (`POST /pos/supprimer`) et `viderPanier()` (`POST /pos/vider`).
+       - `validerVente()` (`POST /pos/valider`) : Traite la soumission de commande, extrait les données de paiement, coordonne `VenteService::validerVente()`, purge le panier de session, mémorise la facture pour impression et gère les messages flash de confirmation / erreur.
+       - `facture(int $id)` (`GET /pos/facture/{id}`) : Rendu du ticket de caisse thermique autonome.
+
+  2. **Interface Tactile Ergonomique de Caisse (`views/pos/index.php`)** :
+     - Conception d'une interface POS split-screen haut de gamme aux teintes Dark Navy / Teal (`#0b0f19`, `#161e31`, `#2dd4bf`) :
+       - **En-tête & KPIs en direct** : CA du jour, total encaissé, créances générées et nombre de tickets émis.
+       - **Catalogue Produits Tactile & Live Search** : Barre de recherche instantanée par nom ou code-barres (raccourci `[F2]`), filtres par catégories avec compteur d'articles, cartes de produits avec badges de stock en temps réel (vert > seuil, jaune $\le$ alerte, rouge épuisé).
+       - **Jauge Dynamique de Solvabilité Client** : Sélecteur de client acheteur affichant en temps réel le plafond autorisé, le cumul des dettes actuelles, le crédit disponible restant et une barre de progression de risque couleur.
+       - **Panier Interactif & Clavier Numérique** : Table des lignes d'articles avec boutons d'ajustement `+` / `-`, sous-totaux dynamiques, calcul automatique des remises et écran digital à fort contraste du total net à payer en FCFA.
+       - **Console d'Encaissement Multi-Modes** : Boutons tactiles pour Espèces, Wave, Orange Money, Carte Bancaire et Dette. Calcul automatique de la monnaie à rendre ou de l'encours de dette, billets rapides (+5 000, +10 000, +20 000, +50 000 F).
+       - **Modal de Ticket / Facture Thermique** : Affichage d'un ticket de caisse conforme 80mm prêt pour impression directe (`window.print()`).
+
+  3. **Routage & Intégration dans le Point d'Entrée (`public/index.php`)** :
+     - Enregistrement des routes `/`, `/pos`, `/pos/ajouter`, `/pos/quantite`, `/pos/supprimer`, `/pos/vider`, `/pos/valider`, et `/pos/facture/{id}`.
+
+  4. **Suite de Tests Automatisés du Contrôleur (`tests/test_pos_controller.php`)** :
+     - Batterie de tests couvrant **24 assertions** : routage, gestion du panier en session (ajout, incrémentation, modification de quantité, suppression, purge), validation de vente comptant et rendu complet des vues sans erreurs de syntaxe.
+     - **Résultat : 24/24 tests validés avec succès (0 échec)**.
+
+  5. **Découpage Modulaire Structuré du Prototype (`storemanager_pro_app.html`)** :
+     - Éclatement chirurgical du prototype monolithique en composants PHP réutilisables et vues d'écrans par acteur dans le répertoire `views/` :
+       - **Layouts Communs** :
+         - `views/layout/header.php` : Doctype, balises meta, police Google Font *Plus Jakarta Sans*, variables CSS et styles globaux.
+         - `views/layout/navbar.php` : Barre de navigation supérieure avec onglets de permissions selon le rôle actif de l'utilisateur.
+         - `views/layout/toast.php` : Composant de notifications flash dynamiques (Succès / Erreurs).
+         - `views/layout/footer.php` : Scripts JS utilitaires globaux (pagination, formatage, toasts) et balises fermantes.
+       - **Vues Métiers Dédiées** :
+         - `views/auth/login.php` : Écran d'authentification split-screen avec sélecteur direct de rôles de démonstration.
+         - `views/dashboard/index.php` : Tableau de bord administratif avec KPIs globaux, graphiques SVG et alertes de stock.
+         - `views/pos/index.php` : Console de caisse tactile connectée au panier et aux clients.
+         - `views/dettes/index.php` : Registre des créances actives avec modale de versement partiel et solde complet.
+         - `views/approvisionnements/index.php` : Registre des réceptions fournisseurs avec modale de saisie de Bon de Livraison (BL).
+         - `views/catalogue/index.php` : Gestion des répertoires produits, clients (avec plafonds de crédit) et fournisseurs.
+
+  6. **Suite de Tests de Non-Régression des Vues (`tests/test_views.php`)** :
+     - Vérification de l'instanciation et du rendu HTML de chaque vue découpée sans notice ni warning PHP.
+     - **Résultat : 6/6 tests de vues validés**.
+
+  7. **Refactorisation & Encapsulation du Routage HTTP (`src/Core/Router.php`)** :
+     - Ajout de la méthode `$router->match(array $methods, string $path, string|callable $controller, ?string $action = null)` permettant d'enregistrer des routes multi-verbes (`GET` et `POST`) sans duplication de code.
+     - Ajout de `Router::registerDefaultRoutes()` qui centralise l'intégralité des routes de l'application (`/`, `/pos`, `/pos/ajouter`, `/pos/quantite`, `/pos/supprimer`, `/pos/vider`, `/pos/valider`, `/pos/facture/{id}`).
+     - Allègement maximal de `public/index.php` réduit à 11 lignes limpides.
+
+- **Difficultés / Obstacles & Solutions d'Architecture** :
+  - *Découplage Web/Métier rigoureux* : `POSController` s'occupe exclusivement du protocole HTTP, de la session (`$_SESSION` via `SessionManager`) et des formats de sortie, tandis que `VenteService` conserve l'intégralité de la logique métier et transactionnelle PDO.
+  - *Compatibilité SQL Multi-SGBD* : Utilisation de la syntaxe SQL `WHERE est_actif = TRUE` pour assurer une compatibilité absolue à la fois sur PostgreSQL et SQLite.
+
+---

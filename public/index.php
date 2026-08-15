@@ -8,5 +8,5 @@ use App\Core\SessionManager;
 SessionManager::start();
 
 $router = new Router();
-
+$router->registerDefaultRoutes();
 $router->dispatch();

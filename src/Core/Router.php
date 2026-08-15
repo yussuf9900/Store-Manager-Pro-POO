@@ -2,9 +2,23 @@
 
 namespace App\Core;
 
+use App\Controller\POSController;
+
 class Router
 {
     private array $routes = [];
+
+    public function registerDefaultRoutes(): void
+    {
+        $this->get('/', POSController::class, 'index');
+        $this->get('/pos', POSController::class, 'index');
+        $this->match(['GET', 'POST'], '/pos/ajouter', POSController::class, 'ajouterArticle');
+        $this->match(['GET', 'POST'], '/pos/quantite', POSController::class, 'modifierQuantite');
+        $this->match(['GET', 'POST'], '/pos/supprimer', POSController::class, 'supprimerArticle');
+        $this->match(['GET', 'POST'], '/pos/vider', POSController::class, 'viderPanier');
+        $this->match(['GET', 'POST'], '/pos/valider', POSController::class, 'validerVente');
+        $this->get('/pos/facture/{id}', POSController::class, 'facture');
+    }
 
     public function get(string $path, string|callable $controller, ?string $action = null): void
     {
@@ -14,6 +28,13 @@ class Router
     public function post(string $path, string|callable $controller, ?string $action = null): void
     {
         $this->add('POST', $path, $controller, $action);
+    }
+
+    public function match(array $methods, string $path, string|callable $controller, ?string $action = null): void
+    {
+        foreach ($methods as $method) {
+            $this->add($method, $path, $controller, $action);
+        }
     }
 
     public function add(string $method, string $path, string|callable $controller, ?string $action = null): void
