@@ -175,3 +175,55 @@
   - *Autonomie de la base SQLite* : Le mécanisme d'auto-création du répertoire `database/` et d'exécution automatique du fichier `schema_sqlite.sql` garantit le déploiement zéro-configuration sur tout nouvel environnement de développement.
 
 ---
+
+### ☀️ [Samedi - Phase 2] : POO, Repositories & Ventes POS
+
+---
+
+#### 📌 Step 2.1 (09h00 - 11h00) : Entités POO Pures & Logique Métier
+
+- **Heure de réalisation** : 09h00 - 11h00
+- **Ce qui a été fait** :
+
+  1. **Configuration du Standard d'Autoloading PSR-4 (via Composer & Autoloader Natif de Secours)** :
+     - Création du descripteur `composer.json` configurant le mapping PSR-4 `"App\\": "src/"` sans aucun framework ni ORM externe.
+     - Implémentation complémentaire de `src/Core/Autoloader.php` pour assurer une portabilité totale dans tous les contextes d'exécution.
+
+  2. **Création des 15 Classes d'Entités POO avec Encapsulation Stricte (`src/Model/Entity/`)** :
+     - **Entités Référentielles** :
+       - `Role` : Constantes de profils (`ADMIN`, `VENTE`, `STOCK`, `INVENTAIRE`), encapsulation des libellés et descriptions.
+       - `StatutDette` : États des créances (`NON_SOLDEE`, `SOLDEE`, `EN_RETARD`), méthodes booléennes `isSoldee()`, `isEnRetard()`.
+       - `ModePaiement` : Canaux d'encaissement (`ESPECES`, `WAVE`, `ORANGE_MONEY`, `CARTE_BANCAIRE`, `DETTE`), statut d'activation `isEstActif()`.
+       - `StatutAppro` : États des bons de livraison (`EN_ATTENTE`, `RECU`, `ANNULE`), méthodes booléennes `isRecu()`, `isEnAttente()`.
+       - `Categorie` : Classification du catalogue produits.
+     - **Entités Acteurs & Sécurité** :
+       - `User` : Gestion des profils et utilisateurs avec hachage cryptographique automatique (`password_hash` BCRYPT dans `setMotDePasse`), vérification via `verifierMotDePasse()`, et contrôle d'habilitation avec `hasRole()`.
+       - `Fournisseur` : Coordonnées des grossistes et contacts directs.
+       - `Client` : Gestion du risque client avec méthodes métiers `getCreditDisponible()`, `peutPrendreCredit(float $montant)`, `ajouterDette(float $montant)` avec levée d'exception en cas de dépassement du plafond, et `diminuerDette(float $montant)`.
+     - **Entités Catalogue & Ventes (Composition Forte)** :
+       - `Produit` : Calcul de rentabilité avec `calculerMarge()` et `calculerTauxMarge()`, détection des alertes stock avec `estEnAlerte()`, et sécurisation des mouvements de stock (`ajouterStock()`, `retirerStock()` avec contrôle d'invariance et exception si stock insuffisant).
+       - `LigneVente` : Calcul automatique du sous-total ligne avec prise en compte des remises `calculerSousTotal()`.
+       - `Vente` : Gestion du panier et des en-têtes de facturation, agrégation multi-lignes `calculerTotal()`, calcul du reste à payer, comptage physique `getNombreArticles()` et détection des ventes à crédit `estACredit()`.
+       - `Commande` : Spécialisation et alias de `Vente` pour répondre aux spécifications fonctionnelles.
+     - **Entités Créances & Versements (Cycle de Vie de Dette)** :
+       - `Paiement` : Enregistrement des acomptes et règlements partiels avec référence de transaction et agent encaisseur.
+       - `Dette` : Gestion du cycle de vie des créances clients. Méthode `enregistrerPaiement(Paiement $paiement)` qui déduit le solde restant, historise le versement et commute automatiquement le statut vers `SOLDEE` dès que `montantRestant <= 0`. Vérification d'échéance avec `estEnRetard()`.
+     - **Entités Approvisionnements (Logique Réception BL)** :
+       - `LigneApprovisionnement` : Sous-total par ligne de produit réceptionné `calculerSousTotal()`.
+       - `Approvisionnement` : Traçabilité des bons de livraison (BL), totalisation automatique `calculerTotal()` et comptage des volumes `getNombreArticles()`.
+
+  3. **Suite de Tests Unitaires & Validation Métier (`tests/test_entities.php`)** :
+     - Écriture d'une batterie de tests automatisés couvrant 38 assertions critiques :
+       - Encapsulation et typage strict PHP 8.3.
+       - Hachage de mot de passe et habilitation RBAC.
+       - Règle de solvabilité client (blocage et exception en cas de crédit supérieur au plafond autorisé).
+       - Alerte de stock et décrémentation sécurisée.
+       - Calculs de remises et sous-totaux panier.
+       - Règlements fractionnés et transition automatique de statut `NON_SOLDEE` -> `SOLDEE`.
+     - **Résultat : 38/38 tests validés avec succès (0 échec)**.
+
+- **Difficultés / Obstacles & Solutions** :
+  - *Gestion bidirectionnelle des relations et cohérence des IDs* : Lors de l'affectation d'un objet relationnel (ex: `$produit->setCategorie($categorie)` ou `$vente->setClient($client)`), l'entité synchronise automatiquement l'identifiant scalaire étranger (`categorieId`, `clientId`) afin de simplifier l'hydratation et la persistance en base de données.
+  - *Immutabilité des invariants financiers* : Les méthodes `ajouterDette()` et `retirerStock()` interdisent formellement les états invalides (stock négatif, crédit supérieur au plafond autorisé) en levant explicitement des `InvalidArgumentException`.
+
+---
