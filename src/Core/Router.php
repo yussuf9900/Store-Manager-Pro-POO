@@ -4,6 +4,7 @@ namespace App\Core;
 
 use App\Controller\DetteController;
 use App\Controller\POSController;
+use App\Controller\SupplyController;
 
 class Router
 {
@@ -22,6 +23,13 @@ class Router
         $this->get('/dettes', DetteController::class, 'index');
         $this->match(['GET', 'POST'], '/dettes/rembourser', DetteController::class, 'rembourser');
         $this->get('/dettes/{id}', DetteController::class, 'details');
+
+        $this->get('/supplies', SupplyController::class, 'index');
+        $this->get('/approvisionnements', SupplyController::class, 'index');
+        $this->match(['GET', 'POST'], '/supplies/receptionner', SupplyController::class, 'receptionner');
+        $this->match(['GET', 'POST'], '/approvisionnements/receptionner', SupplyController::class, 'receptionner');
+        $this->match(['GET', 'POST'], '/supplies/creer', SupplyController::class, 'creer');
+        $this->match(['GET', 'POST'], '/approvisionnements/creer', SupplyController::class, 'creer');
     }
 
     public function get(string $path, string|callable $controller, ?string $action = null): void

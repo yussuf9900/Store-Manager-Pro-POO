@@ -460,3 +460,54 @@
   - Rendu modulaire et ergonomie sans AJAX : L'utilisation de tiroirs locaux en CSS/JS (toggleDetails) combinée au pattern Post-Redirect-Get offre une expérience utilisateur fluide tout en respectant l'architecture MVC synchrone standard.
 
 ---
+
+#### Step 3.2 (11h30 - 13h30) : Approvisionnements & Réception BL
+
+- **Heure de réalisation** : 11h30 - 13h30
+- **Ce qui a été fait** :
+
+  1. **Couche d'Accès aux Données Approvisionnements (`src/Model/Repository/ApprovisionnementRepository.php`)** :
+     - Implémentation complète de `ApprovisionnementRepository` héritant de `AbstractRepository` et implémentant `RepositoryInterface` :
+       - `findById(int $id)` et `findByNumeroBL(string $numeroBL)` avec jointures `fournisseurs`, `statuts_appro`, `utilisateurs` et chargement de la collection `LigneApprovisionnement[]` avec leurs entités `Produit` associées.
+       - `findAll()`, `findByFournisseur(int $fournisseurId)`, `findByStatut(int $statutId)`, `findEnAttente()`, `findRecus()`.
+       - `save(Approvisionnement $appro)` (Insert/Update) et `saveLigne(LigneApprovisionnement $ligne)`.
+       - `updateStatut(int $approId, int $statutId)` et `updateMontantTotal(int $approId, float $montantTotal)`.
+       - `getTotalCoutEntrees(): float` : Agrégation SQL du montant global des achats de marchandises entrées en stock.
+       - `count()`, `countRecus()`, `countEnAttente()`, `delete(int $id)`.
+
+  2. **Service Métier Transactionnel d'Approvisionnement (`src/Service/SupplyService.php`)** :
+     - `creerApprovisionnement(int $fournisseurId, array $articles, int $userId = 1, ?string $numeroBL = null, bool $receptionnerImmediatement = false)` :
+       - Contrôles d'intégrité : vérification de l'existence du fournisseur, contrôle des articles (quantités > 0, prix d'achat >= 0).
+       - Génération automatique du numéro de Bon de Livraison (format `BL-{FOURNISSEUR}-{NUM}`) sous transaction PDO.
+       - Enregistrement de l'en-tête et des lignes associées.
+     - `receptionnerBL(int $approvisionnementId, ?array $quantitesLivrees = null, int $userId = 1): array` :
+       - Contrôles d'invariance : rejet formel si le BL est déjà réceptionné (`statut_id = 2`) ou annulé (`statut_id = 3`), rejet des quantités négatives.
+       - Transaction PDO atomique (`beginTransaction` / `commit` / `rollBack`) :
+         - Parcours des lignes de produits et prise en compte des éventuels ajustements de quantités réelles reçues.
+         - **Incrémentation automatique et atomique du stock physique** des produits en magasin via `ProduitRepository::incrementStock(produitId, quantite)`.
+         - Recalcul du montant total du lot et bascule automatique du statut en `RECU` (`statut_id = 2`).
+         - Sécurisation sous `try / catch (\Throwable)` avec `rollBack()` systématique en cas d'erreur.
+     - Consultation et statistiques : `getApprovisionnement()`, `getApprovisionnementByBL()`, `getAllApprovisionnements()`, `getStatistiquesAppro()`.
+
+  3. **Contrôleur Web & Routage MVC (`src/Controller/SupplyController.php` & `src/Core/Router.php`)** :
+     - `index()` : Récupère les approvisionnements, statistiques, fournisseurs et produits pour injection dans la vue.
+     - `receptionner()` : Traite la validation de réception transmise en POST, délègue à `SupplyService::receptionnerBL()`, génère les notifications Flash dans `SessionManager` et redirige selon le pattern PRG (Post-Redirect-Get) vers `/supplies`.
+     - `creer()` : Permet la création de nouveaux BL.
+     - Enregistrement des routes `/supplies`, `/approvisionnements`, `/supplies/receptionner`, `/approvisionnements/receptionner`, `/supplies/creer` dans `Router.php`.
+
+  4. **Interface Utilisateur Conforme au Prototype (`src/views/approvisionnements/index.php`)** :
+     - Dynamisation complète du template issu de `storemanager_pro_app.html` (lignes 1900 à 2220) :
+       - 3 cartes de statistiques : Coût Total des Entrées, Bons de Réception (BL), Fournisseurs Actifs.
+       - Tableau principal des Bordereaux de Livraison avec statuts dynamiques (`badge-success REÇU` vs `badge-warning EN COURS`).
+       - Tiroir 1 (`supply-details-{id}`) : Liste détaillée des lignes d'articles, quantités livrées, coûts unitaires et totaux.
+       - Tiroir 2 (`supply-receive-drawer-{id}`) : Formulaire interactif de réception de stock permettant d'ajuster les quantités reçues par article et de valider en direct l'entrée en magasin.
+
+  5. **Suite de Tests Automatisés (`tests/test_supply_service.php`)** :
+     - Batterie de tests couvrant 34 assertions : consultation repository, création de BL en attente, réception avec incrémentation de stock vérifiée en BDD, gestion des erreurs (rejet double réception, BL inexistant, panier vide), réception avec ajustement de quantités et rendu complet de la vue.
+     - **Résultat : 34/34 tests validés avec 100% de succès**.
+
+- **Difficultés / Obstacles & Solutions d'Architecture** :
+  - *Atomicité de la réception et incrémentation de stock* : La réception d'un Bon de Livraison doit garantir que la mise à jour des statuts du BL et l'incrémentation des stocks de chaque référence s'effectuent de façon indivisible sous transaction PDO. En cas d'incident sur un seul article, le `rollBack()` restaure l'état exact sans modification fantôme de stock.
+  - *Gestion des écarts de livraison* : Le service supporte la réception partielle ou ajustée via le tableau `$quantitesLivrees`, permettant au gestionnaire de stock de saisir la quantité physique réellement constatée lors du déchargement.
+
+---

@@ -255,7 +255,16 @@ INSERT INTO dettes (vente_id, client_id, montant_total, montant_restant, date_cr
 (2, 4, 85000.00, 85000.00, CURRENT_TIMESTAMP - INTERVAL '7 days', CURRENT_TIMESTAMP + INTERVAL '7 days', 1);
 
 INSERT INTO approvisionnements (numero_bl, date_appro, montant_total, statut_id, fournisseur_id, user_id) VALUES
-('BL-2026-0001', CURRENT_TIMESTAMP - INTERVAL '2 days', 362500.00, 2, 1, 3);
+('BL-DIP-099', CURRENT_TIMESTAMP - INTERVAL '2 days', 190000.00, 2, 2, 3),
+('BL-SEN-102', CURRENT_TIMESTAMP - INTERVAL '1 days', 190000.00, 1, 3, 3),
+('BL-CCS-101', CURRENT_TIMESTAMP - INTERVAL '3 hours', 525000.00, 1, 1, 3);
 
 INSERT INTO lignes_approvisionnement (approvisionnement_id, produit_id, quantite, prix_achat_unitaire, sous_total) VALUES
-(1, 1, 25, 14500.00, 362500.00);
+(1, 2, 20, 5200.00, 104000.00),
+(1, 7, 100, 600.00, 60000.00),
+(1, 4, 17, 1500.00, 26000.00),
+(2, 3, 50, 800.00, 40000.00),
+(2, 2, 25, 5200.00, 130000.00),
+(2, 4, 13, 1500.00, 20000.00),
+(3, 1, 35, 14500.00, 507500.00),
+(3, 6, 14, 1200.00, 17500.00);

@@ -1,6 +1,6 @@
 <?php
 $currentNav = $activeNav ?? 'pos';
-$userName = $currentUser ? $currentUser->getNomComplet() : 'Admin Boutique';
+$userName = (isset($currentUser) && $currentUser && method_exists($currentUser, 'getNomComplet')) ? $currentUser->getNomComplet() : 'Admin Boutique';
 ?>
 <div class="navbar">
     <div class="nav-logo">
@@ -17,8 +17,8 @@ $userName = $currentUser ? $currentUser->getNomComplet() : 'Admin Boutique';
     <div style="margin-left: auto; display: flex; align-items: center; gap: 14px;">
         <div style="text-align: right;">
             <div id="current-user-role" style="font-size: 12px; font-weight: 800; color: var(--accent);"><?= htmlspecialchars($userName) ?></div>
-            <div style="font-size: 10px; color: var(--text-muted);"><?= date('d/m/Y H:i') ?></div>
+            <div style="font-size: 10px; color: var(--text-muted);">Session active</div>
         </div>
-        <a href="/pos" class="btn-quick-action" style="border-color: var(--danger); color: var(--danger); background: rgba(248, 113, 113, 0.08); padding: 8px 12px;">Caisse 🛒</a>
+        <a href="/login" class="btn-quick-action" style="border-color: var(--danger); color: var(--danger); background: rgba(248, 113, 113, 0.08); padding: 8px 12px; text-decoration: none;">Déconnexion 🚪</a>
     </div>
 </div>

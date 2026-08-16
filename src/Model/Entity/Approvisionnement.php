@@ -73,6 +73,21 @@ class Approvisionnement
         return $this->numeroBL;
     }
 
+    public function isRecu(): bool
+    {
+        return ($this->statut !== null && $this->statut->isRecu()) || $this->statutId === 2;
+    }
+
+    public function isEnAttente(): bool
+    {
+        return ($this->statut !== null && $this->statut->isEnAttente()) || $this->statutId === 1;
+    }
+
+    public function isAnnule(): bool
+    {
+        return ($this->statut !== null && $this->statut->isAnnule()) || $this->statutId === 3;
+    }
+
     public function setNumeroBL(string $numeroBL): self
     {
         $this->numeroBL = trim($numeroBL);
