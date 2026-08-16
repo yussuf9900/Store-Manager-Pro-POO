@@ -569,3 +569,592 @@
 
 ---
 
+#### Step 3.4 (16h30 - 18h00) : Rédaction de l'Autopsie des 3 Méthodes Clés & Finalisation
+
+- **Commit Git associé** : `git commit -m "docs(devlog): finalisation du journal de bord DEVLOG.md et autopsie des 3 methodes cles"`
+- **Heure de réalisation** : 16h30 - 18h00
+- **Ce qui a été fait** :
+
+  1. **Consolidation Globale & Revue d'Architecture** :
+     - Vérification de l'étanchéité des couches architecturales (*Core*, *Model/Entity*, *Model/Repository*, *Service*, *Controller*, *Views*).
+     - Contrôle strict du principe de responsabilité unique (SRP) : les entités contiennent la logique métier pure et les invariants, les repositories gèrent la persistance PDO préparée, les services orchestrent les transactions atomiques, les contrôleurs traitent les requêtes HTTP/Session/PRG et les vues assurent le rendu ergonomique.
+     - Validation de la chaîne de routage avec `src/Core/Router.php` et allègement du Front Controller `public/index.php`.
+
+  2. **Exécution Complète de la Suite de Tests Automatisés (294 assertions)** :
+     - Lancement séquentiel des 8 scripts de tests automatisés :
+       - `tests/test_entities.php` : 38 assertions (POO pure, encapsulation, calculs métiers, invariants).
+       - `tests/test_repositories.php` : 45 assertions (CRUD, requêtes préparées, décrémentation/incrémentation atomique).
+       - `tests/test_vente_service.php` : 57 assertions (validation vente, transactions PDO, contrôle plafond crédit, rollback).
+       - `tests/test_pos_controller.php` : 24 assertions (actions panier en session, calculs dynamiques, flux caisse).
+       - `tests/test_views.php` : 6 assertions (rendu HTML des vues sans notices/warnings PHP).
+       - `tests/test_debt_service.php` : 42 assertions (remboursements partiels/totaux, mise à jour encours, bascule `SOLDEE`).
+       - `tests/test_supply_service.php` : 34 assertions (création BL, réception, incrémentation automatique de stock).
+       - `tests/test_auth.php` : 48 assertions (authentification, 4 profils de démo, gardes RBAC, navbar dynamique).
+     - **Résultat global : 294/294 assertions réussies avec un taux de succès de 100% (0 échec)**.
+
+  3. **Rédaction Approfondie de la Section 2 : Autopsie de 3 Méthodes Clés** :
+     - Analyse chirurgicale ligne par ligne des 3 méthodes fondamentales pour l'épreuve orale :
+       - `Database::getInstance()` (`src/Core/Database.php`)
+       - `VenteService::validerVente()` (`src/Service/VenteService.php`)
+       - `DebtService::enregistrerRemboursement()` (`src/Service/DebtService.php`)
+     - Intégration de fiches de révision structurées avec questions pièges, justifications architecturales et réponses types pour la soutenance.
+
+  4. **Finalisation du Dossier de Conception & Documentation Globale** :
+     - Rédaction du `README.md` principal à la racine avec présentation détaillée de l'ERP, matrice des profils, guide de déploiement et commandes de tests.
+     - Alignement rigoureux avec `charte_projet_etudiants.md` et `planning_weekend_etudiants.md`.
+
+---
+
+## 2. Autopsie de 3 Méthodes Clés (Indispensable pour l'oral)
+
+Ce volet constitue le **guide d'analyse technique et de révision pour la soutenance individuelle orale**. Chaque méthode y est décortiquée dans son rôle métier, son implémentation technique ligne par ligne, ses choix d'architecture et les questions d'évaluation typiques du formateur.
+
+---
+
+### 🔍 Méthode 1 : `Database::getInstance()` (Design Pattern Singleton & Fallback Résilient)
+
+- **Fichier** : `src/Core/Database.php` (Lignes 30 à 37, couplée à `initConnection()` lignes 73 à 133)
+- **Rôle Métier** : Garantir un accès unique, universel et hautement disponible à la base de données de l'ERP pour toute l'application, en absorbant de manière totalement transparente les coupures ou indisponibilités de PostgreSQL grâce à un basculement immédiat et autonome vers une base locale SQLite persistante.
+- **Rôle Technique** :
+  - Implémentation stricte du **Design Pattern Singleton** : constructeur privé, clonage privé désactivé, désérialisation bloquée (`__wakeup()`).
+  - **Mécanisme de Fallback à 2 Niveaux** sous blocs `try / catch (\PDOException)` : tentative de connexion PostgreSQL prioritaire, capture de l'erreur réseau/SGBD, puis bascule automatique sur SQLite `database/erp.db`.
+  - **Self-Healing (Auto-initialisation)** : si le fichier SQLite n'existe pas ou pèse 0 octet, la méthode crée le dossier `database/`, charge le script DDL `database/schema_sqlite.sql` et initialise la base complète avec ses données d'amorçage.
+  - **Sécurisation PDO** : forçage de `ERRMODE_EXCEPTION`, `FETCH_ASSOC` et désactivation de l'émulation des requêtes préparées (`EMULATE_PREPARES => false`).
+  - **Activation des Clés Étrangères SQLite** : exécution impérative de `PRAGMA foreign_keys = ON;`.
+
+#### 📜 Extrait de Code Réel :
+
+```php
+// Extrait de src/Core/Database.php
+
+class Database
+{
+    private static ?Database $instance = null;
+    private ?PDO $connection = null;
+    private string $driver = 'unknown';
+    private ?string $connectionMessage = null;
+
+    private function __construct()
+    {
+        $this->initConnection();
+    }
+
+    private function __clone() {}
+
+    public function __wakeup()
+    {
+        throw new Exception("Impossible de désérialiser une instance Singleton de " . __CLASS__);
+    }
+
+    public static function getInstance(): Database
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
+    }
+
+    public static function getPDO(): PDO
+    {
+        return self::getInstance()->getConnection();
+    }
+
+    private function initConnection(): void
+    {
+        $pdoOptions = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+
+        try {
+            $pgHost = getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? '127.0.0.1');
+            $pgPort = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '5433');
+            $pgDb   = getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? 'storemanager_db');
+            $pgUser = getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? 'ichigo');
+            $pgPass = getenv('DB_PASS') ?: ($_ENV['DB_PASS'] ?? 'password');
+
+            $dsnPgsql = "pgsql:host={$pgHost};port={$pgPort};dbname={$pgDb};";
+
+            $this->connection = new PDO($dsnPgsql, $pgUser, $pgPass, $pdoOptions);
+            $this->driver = 'pgsql';
+            $this->connectionMessage = "Connexion PostgreSQL établie ({$pgHost}:{$pgPort}/{$pgDb}).";
+            return;
+        } catch (PDOException $pgException) {
+            $pgError = $pgException->getMessage();
+        }
+
+        try {
+            $baseDir = dirname(__DIR__, 2);
+            $sqliteFile = getenv('DB_SQLITE_PATH') ?: ($_ENV['DB_SQLITE_PATH'] ?? $baseDir . '/database/erp.db');
+
+            $sqliteDir = dirname($sqliteFile);
+            if (!is_dir($sqliteDir)) {
+                mkdir($sqliteDir, 0755, true);
+            }
+
+            $isNewDatabase = !file_exists($sqliteFile) || filesize($sqliteFile) === 0;
+
+            $dsnSqlite = "sqlite:" . $sqliteFile;
+            $this->connection = new PDO($dsnSqlite, null, null, $pdoOptions);
+            $this->driver = 'sqlite';
+
+            $this->connection->exec("PRAGMA foreign_keys = ON;");
+
+            if ($isNewDatabase) {
+                $schemaFile = $baseDir . '/database/schema_sqlite.sql';
+                if (!file_exists($schemaFile)) {
+                    $schemaFile = $baseDir . '/schema_sqlite.sql';
+                }
+
+                if (file_exists($schemaFile)) {
+                    $schemaSql = file_get_contents($schemaFile);
+                    $this->connection->exec($schemaSql);
+                }
+            }
+
+            $this->connectionMessage = "Bascule sur SQLite réussie ({$sqliteFile}).";
+        } catch (PDOException $sqliteException) {
+            throw new Exception(
+                "Erreur connexion BDD : Échec PostgreSQL ({$pgError}) et échec SQLite ({$sqliteException->getMessage()})"
+            );
+        }
+    }
+}
+```
+
+#### 🔬 Explication Ligne par Ligne :
+
+- **Ligne 11 : `private static ?Database $instance = null;`**  
+  Déclare la propriété statique privée qui conservera l'unique référence de l'objet `Database` en mémoire durant tout le cycle de vie du script PHP.
+- **Ligne 16-19 : `private function __construct() { $this->initConnection(); }`**  
+  Le constructeur est déclaré avec la visibilité `private`. Cela interdit formellement à tout code externe d'instancier un nouvel objet via l'opérateur `new Database()`, forçant le passage par `getInstance()`. À l'instanciation interne, il appelle `initConnection()`.
+- **Ligne 21-23 : `private function __clone() {}`**  
+  Rend la méthode magique `__clone` inaccessible depuis l'extérieur, interdisant le clonage d'instance (`clone $db`).
+- **Ligne 25-28 : `public function __wakeup() { throw new Exception(...); }`**  
+  Empêche la réinstanciation de l'objet par désérialisation binaire (`unserialize()`), fermant la dernière faille possible contre le principe d'instance unique.
+- **Ligne 30-37 : `public static function getInstance(): Database`**  
+  Point d'accès global statique (*Lazy Loading*). Si `self::$instance` est encore `null` (premier appel), elle instancie l'unique objet `new self()`. Les appels ultérieurs retournent directement l'instance déjà présente en mémoire sans ré-exécuter le processus d'initialisation.
+- **Ligne 39-42 : `public static function getPDO(): PDO`**  
+  Helper statique de commodité permettant aux repositories d'obtenir l'objet `PDO` natif en une seule ligne : `Database::getPDO()`.
+- **Lignes 75-79 : `$pdoOptions = [...]`**  
+  Définit les options globales de sécurité et d'intégrité PDO :
+  - `PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION` : Oblige PDO à lever des exceptions `PDOException` pour toute erreur SQL (violation de contrainte, faute de syntaxe, panne).
+  - `PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC` : Les résultats des requêtes sont automatiquement convertis en tableaux associatifs indexés par les noms de colonnes SQL.
+  - `PDO::ATTR_EMULATE_PREPARES => false` : Désactive l'émulation logicielle PHP des requêtes préparées. Les requêtes sont transmises au moteur SGBD pour une véritable préparation et une immunité absolue contre les injections SQL.
+- **Lignes 81-93 : `try { ... PostgreSQL ... }`**  
+  Bloc prioritaire de tentative de connexion PostgreSQL. Récupère les variables d'environnement (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`), compose la chaîne DSN `pgsql:host=...` et instancie l'objet `PDO`. Si la connexion réussit, `$this->driver` passe à `'pgsql'` et la fonction se termine immédiatement par `return;`.
+- **Lignes 94-96 : `catch (PDOException $pgException) { $pgError = ...; }`**  
+  Intercepte l'exception si le serveur PostgreSQL est éteint, injoignable ou mal configuré. La variable `$pgError` stocke le message de diagnostic, et l'exécution continue sans planter pour déclencher le fallback.
+- **Lignes 98-128 : `try { ... SQLite Fallback ... }`**  
+  Bloc de secours. Détermine le chemin absolu du fichier `database/erp.db`. Si le dossier parent n'existe pas, il le crée via `mkdir($sqliteDir, 0755, true)`.
+- **Ligne 107 : `$isNewDatabase = !file_exists($sqliteFile) || filesize($sqliteFile) === 0;`**  
+  Détecte si la base SQLite locale est vierge (fichier inexistant ou vide à 0 octet).
+- **Ligne 110 : `$this->connection = new PDO("sqlite:" . $sqliteFile, ...);`**  
+  Crée la connexion PDO SQLite locale sur le fichier.
+- **Ligne 113 : `$this->connection->exec("PRAGMA foreign_keys = ON;");`**  
+  **Instruction vitale** : active la vérification des clés étrangères dans SQLite (désactivée par défaut par le moteur SQLite), garantissant le respect strict des contraintes d'intégrité référentielle.
+- **Lignes 115-125 : `if ($isNewDatabase) { ... exec($schemaSql); }`**  
+  Si la base vient d'être créée, le script lit `database/schema_sqlite.sql` et exécute l'intégralité du DDL et des insertions de seeding (rôles, utilisateurs, catégories, produits, dettes d'essai).
+- **Lignes 129-132 : `catch (PDOException $sqliteException)`**  
+  Si PostgreSQL ET SQLite échouent tous les deux, une `Exception` claire est levée détaillant les causes des deux échecs consécutifs.
+---
+
+### 🔍 Méthode 2 : `VenteService::validerVente()` (Cœur Transactionnel de Caisse & Contrôle de Risque)
+
+- **Fichier** : `src/Service/VenteService.php` (Lignes 108 à 307)
+- **Rôle Métier** : Valider l'encaissement d'une vente en caisse tactile POS. Elle vérifie la solvabilité du client en cas de vente à crédit (contrôle du plafond `limite_credit`), vérifie et décrémente en temps réel le stock physique des produits, enregistre la facture et les lignes de vente, crée automatiquement la créance dans le registre des dettes si un reste à payer subsiste, et historise les éventuels acomptes.
+- **Rôle Technique** :
+  - Orchestration sous **Transaction PDO unifiée** (`beginTransaction()`, `commit()`, `rollBack()`).
+  - **Requêtes préparées PDO strictes** contre les injections SQL.
+  - **Sécurisation contre les accès concurrents (Race Conditions)** : décrémentation SQL conditionnelle `UPDATE produits SET qte_stock = qte_stock - :qte WHERE id = :id AND qte_stock >= :qte` et vérification de `rowCount() === 0`.
+  - **Règle d'invariance financière client** : `(total_dettes_actuelles + montantRestant) <= limite_credit` vérifiée via la méthode métier `Client::peutPrendreCredit()`.
+  - **Rollback automatique et complet** sous bloc `catch (Throwable $e)` : en cas de rupture de stock concurrente ou d'erreur SQL, aucune table n'est corrompue et l'état initial est restauré.
+
+#### 📜 Extrait de Code Réel :
+
+```php
+// Extrait de src/Service/VenteService.php
+
+public function validerVente(
+    int $userId,
+    ?int $clientId = null,
+    int $modePaiementId = 1,
+    float $montantPaye = 0.0,
+    array $articles = [],
+    ?DateTime $dateEcheance = null
+): Vente {
+    // 1. Contrôle préalable du panier
+    if (empty($articles)) {
+        throw new InvalidArgumentException("Impossible de valider la transaction : le panier de vente est vide.");
+    }
+
+    $lignesPreparees = [];
+    $montantTotalCalcule = 0.0;
+
+    // 2. Vérification unitaire des articles et du stock physique
+    foreach ($articles as $item) {
+        $produitId = (int)($item['produit_id'] ?? $item['id'] ?? 0);
+        $quantite = (int)($item['quantite'] ?? 1);
+        $remise = max(0.0, (float)($item['remise'] ?? 0.0));
+
+        if ($produitId <= 0 || $quantite <= 0) {
+            throw new InvalidArgumentException("Données d'article invalides.");
+        }
+
+        $produit = $this->produitRepository->findById($produitId);
+        if (!$produit) {
+            throw new InvalidArgumentException("L'article ID #{$produitId} n'existe pas.");
+        }
+
+        if ($produit->getQteStock() < $quantite) {
+            throw new RuntimeException(
+                sprintf("Stock insuffisant pour l'article '%s' : Demandé = %d, Disponible = %d.",
+                    $produit->getLibelle(), $quantite, $produit->getQteStock())
+            );
+        }
+
+        $prixUnitaire = isset($item['prix_unitaire']) && (float)$item['prix_unitaire'] > 0
+            ? (float)$item['prix_unitaire']
+            : $produit->getPrixVente();
+
+        $sousTotal = max(0.0, ($prixUnitaire * $quantite) - $remise);
+        $montantTotalCalcule += $sousTotal;
+
+        $lignesPreparees[] = [
+            'produit' => $produit,
+            'produit_id' => $produitId,
+            'quantite' => $quantite,
+            'prix_unitaire' => $prixUnitaire,
+            'remise' => $remise,
+            'sous_total' => $sousTotal
+        ];
+    }
+
+    // 3. Calculs financiers & analyse du crédit
+    $isVenteDette = ($modePaiementId === 5);
+    $montantPaye = max(0.0, $montantPaye);
+    if (!$isVenteDette && $montantPaye <= 0.0) {
+        $montantPaye = $montantTotalCalcule;
+    }
+
+    $montantRestant = max(0.0, $montantTotalCalcule - $montantPaye);
+    $estACredit = ($montantRestant > 0 || $isVenteDette);
+
+    // 4. Contrôle de solvabilité client
+    $client = null;
+    if ($estACredit) {
+        if ($clientId === null || $clientId <= 0) {
+            throw new InvalidArgumentException("Un client nominatif est obligatoire pour toute vente à crédit.");
+        }
+
+        $client = $this->clientRepository->findById($clientId);
+        if (!$client) {
+            throw new InvalidArgumentException("Le compte client sélectionné est introuvable.");
+        }
+
+        if (!$client->peutPrendreCredit($montantRestant)) {
+            throw new RuntimeException(
+                sprintf("Plafond de crédit dépassé pour le client '%s' : Limite = %.2f FCFA, Encours = %.2f FCFA, Disponible = %.2f FCFA.",
+                    $client->getNomComplet(), $client->getLimiteCredit(), $client->getTotalDettesActuelles(), $client->getCreditDisponible())
+            );
+        }
+    } elseif ($clientId !== null && $clientId > 0) {
+        $client = $this->clientRepository->findById($clientId);
+    }
+
+    // 5. Exécution transactionnelle atomique sous PDO
+    $pdo = Database::getPDO();
+    $pdo->beginTransaction();
+
+    try {
+        $numeroFacture = $this->genererNumeroFacture();
+        $dateVenteStr = (new DateTime())->format('Y-m-d H:i:s');
+
+        // A. Insertion de l'en-tête de vente
+        $stmtVente = $pdo->prepare(
+            "INSERT INTO ventes (numero_facture, date_vente, montant_total, montant_paye, montant_restant, mode_paiement_id, statut, client_id, user_id)
+             VALUES (:numero_facture, :date_vente, :montant_total, :montant_paye, :montant_restant, :mode_paiement_id, :statut, :client_id, :user_id)"
+        );
+        $stmtVente->bindValue(':numero_facture', $numeroFacture, PDO::PARAM_STR);
+        $stmtVente->bindValue(':date_vente', $dateVenteStr, PDO::PARAM_STR);
+        $stmtVente->bindValue(':montant_total', $montantTotalCalcule);
+        $stmtVente->bindValue(':montant_paye', $montantPaye);
+        $stmtVente->bindValue(':montant_restant', $montantRestant);
+        $stmtVente->bindValue(':mode_paiement_id', $modePaiementId, PDO::PARAM_INT);
+        $stmtVente->bindValue(':statut', 'VALIDEE', PDO::PARAM_STR);
+        $stmtVente->bindValue(':client_id', $clientId ?: null, $clientId ? PDO::PARAM_INT : PDO::PARAM_NULL);
+        $stmtVente->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmtVente->execute();
+
+        $venteId = (int)$pdo->lastInsertId();
+
+        // B. Insertion des lignes et décrémentation atomique de stock
+        $stmtLigne = $pdo->prepare(
+            "INSERT INTO lignes_vente (vente_id, produit_id, quantite, prix_unitaire, remise, sous_total)
+             VALUES (:vente_id, :produit_id, :quantite, :prix_unitaire, :remise, :sous_total)"
+        );
+
+        $stmtDecStock = $pdo->prepare(
+            "UPDATE produits SET qte_stock = qte_stock - :qte WHERE id = :id AND qte_stock >= :qte"
+        );
+
+        foreach ($lignesPreparees as $ligne) {
+            $stmtLigne->bindValue(':vente_id', $venteId, PDO::PARAM_INT);
+            $stmtLigne->bindValue(':produit_id', $ligne['produit_id'], PDO::PARAM_INT);
+            $stmtLigne->bindValue(':quantite', $ligne['quantite'], PDO::PARAM_INT);
+            $stmtLigne->bindValue(':prix_unitaire', $ligne['prix_unitaire']);
+            $stmtLigne->bindValue(':remise', $ligne['remise']);
+            $stmtLigne->bindValue(':sous_total', $ligne['sous_total']);
+            $stmtLigne->execute();
+
+            $stmtDecStock->bindValue(':qte', $ligne['quantite'], PDO::PARAM_INT);
+            $stmtDecStock->bindValue(':id', $ligne['produit_id'], PDO::PARAM_INT);
+            $stmtDecStock->execute();
+
+            if ($stmtDecStock->rowCount() === 0) {
+                throw new RuntimeException(
+                    "Rupture de stock concurrente survenue lors de la validation de l'article '{$ligne['produit']->getLibelle()}'."
+                );
+            }
+        }
+
+        // C. Traitement de la dette et mise à jour de l'encours client
+        if ($estACredit && $montantRestant > 0 && $clientId !== null) {
+            $echeance = $dateEcheance ?? (new DateTime())->modify('+30 days');
+
+            $stmtDette = $pdo->prepare(
+                "INSERT INTO dettes (vente_id, client_id, montant_total, montant_restant, date_creation, date_echeance, statut_id)
+                 VALUES (:vente_id, :client_id, :montant_total, :montant_restant, :date_creation, :date_echeance, :statut_id)"
+            );
+            $stmtDette->bindValue(':vente_id', $venteId, PDO::PARAM_INT);
+            $stmtDette->bindValue(':client_id', $clientId, PDO::PARAM_INT);
+            $stmtDette->bindValue(':montant_total', $montantRestant);
+            $stmtDette->bindValue(':montant_restant', $montantRestant);
+            $stmtDette->bindValue(':date_creation', $dateVenteStr, PDO::PARAM_STR);
+            $stmtDette->bindValue(':date_echeance', $echeance->format('Y-m-d H:i:s'), PDO::PARAM_STR);
+            $stmtDette->bindValue(':statut_id', 1, PDO::PARAM_INT);
+            $stmtDette->execute();
+
+            $detteId = (int)$pdo->lastInsertId();
+
+            $stmtClient = $pdo->prepare(
+                "UPDATE clients SET total_dettes_actuelles = total_dettes_actuelles + :montant WHERE id = :id"
+            );
+            $stmtClient->bindValue(':montant', $montantRestant);
+            $stmtClient->bindValue(':id', $clientId, PDO::PARAM_INT);
+            $stmtClient->execute();
+
+            // D. Historisation de l'acompte initial si présent
+            if ($montantPaye > 0) {
+                $stmtPaiement = $pdo->prepare(
+                    "INSERT INTO paiements (dette_id, montant, date_paiement, mode_paiement_id, reference_paiement, user_id)
+                     VALUES (:dette_id, :montant, :date_paiement, :mode_paiement_id, :ref, :user_id)"
+                );
+                $stmtPaiement->bindValue(':dette_id', $detteId, PDO::PARAM_INT);
+                $stmtPaiement->bindValue(':montant', $montantPaye);
+                $stmtPaiement->bindValue(':date_paiement', $dateVenteStr, PDO::PARAM_STR);
+                $stmtPaiement->bindValue(':mode_paiement_id', $modePaiementId, PDO::PARAM_INT);
+                $stmtPaiement->bindValue(':ref', 'ACOMPTE-' . $numeroFacture, PDO::PARAM_STR);
+                $stmtPaiement->bindValue(':user_id', $userId, PDO::PARAM_INT);
+                $stmtPaiement->execute();
+            }
+        }
+
+        // 6. Validation définitive
+        $pdo->commit();
+
+        return $this->getVente($venteId);
+
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+```
+
+#### 🔬 Explication Ligne par Ligne :
+
+- **Lignes 116-118 : `if (empty($articles)) throw new InvalidArgumentException(...)`**  
+  Garde-fou d'entrée rejetant immédiatement la transaction si le panier soumis est vide.
+- **Lignes 123-164 : Boucle `foreach ($articles as $item)`**  
+  Parcours de chaque ligne d'article pour validation :
+  - Extraction de l'ID produit, quantité et remise.
+  - Recherche du produit en base via `$this->produitRepository->findById($produitId)`.
+  - Vérification préalable du stock : `if ($produit->getQteStock() < $quantite) throw new RuntimeException(...)`.
+  - Calcul du sous-total ligne : `max(0.0, ($prixUnitaire * $quantite) - $remise)` et cumul dans `$montantTotalCalcule`.
+  - Stockage dans le tableau intermédiaire `$lignesPreparees`.
+- **Lignes 166-174 : Calculs des montants et détection du crédit**  
+  - Identifie si le mode de paiement est `DETTE` (ID 5).
+  - Si vente au comptant sans montant saisi, le montant payé est automatiquement égal au total net.
+  - `$montantRestant = max(0.0, $montantTotalCalcule - $montantPaye)`.
+  - `$estACredit = ($montantRestant > 0 || $isVenteDette)`.
+- **Lignes 176-199 : Contrôle de Solvabilité Client & Plafond de Risque**  
+  Si la vente génère un reste à payer :
+  - Vérifie la présence d'un client nominatif : `if ($clientId === null) throw new InvalidArgumentException(...)`.
+  - Récupère l'entité `Client`.
+  - **Appel de la méthode métier de l'entité POO** : `if (!$client->peutPrendreCredit($montantRestant))`. Si la somme `totalDettesActuelles + montantRestant > limiteCredit`, une exception bloquante est levée avec le détail des soldes.
+- **Lignes 204-205 : `$pdo = Database::getPDO(); $pdo->beginTransaction();`**  
+  Ouverture de la transaction SQL atomique. Dès cette instruction, toutes les modifications SQL suivantes sont isolées en mémoire tampon jusqu'au `commit()`.
+- **Lignes 208-225 : Insertion de l'en-tête de vente**  
+  Génère le numéro unique de facture (`FACT-YYYYMMDD-XXXXXX`) et exécute la requête préparée `INSERT INTO ventes (...)`. Récupère l'identifiant généré via `$pdo->lastInsertId()`.
+- **Lignes 237-255 : Insertion des lignes et décrémentation atomique**  
+  Pour chaque article :
+  - Insère le détail dans `lignes_vente`.
+  - Exécute `UPDATE produits SET qte_stock = qte_stock - :qte WHERE id = :id AND qte_stock >= :qte`.
+  - **Garde-fou anti-concurrence** : `if ($stmtDecStock->rowCount() === 0)` $\rightarrow$ si aucune ligne n'a été modifiée (parce qu'une autre caisse a acheté le stock entre-temps), une exception est levée pour annuler l'ensemble de la transaction.
+- **Lignes 257-295 : Traitement de la Créance Client**  
+  Si vente à crédit :
+  - Calcule l'échéance à +30 jours par défaut.
+  - Insère la créance dans `dettes` avec le statut initial `NON_SOLDEE` (`statut_id = 1`).
+  - Incrémente l'encours du client dans `clients` : `UPDATE clients SET total_dettes_actuelles = total_dettes_actuelles + :montant WHERE id = :id`.
+  - Si le client a versé un acompte initial partiel, insère une ligne de reçu dans `paiements` (`ACOMPTE-FACT-...`).
+- **Ligne 297 : `$pdo->commit();`**  
+  Validation définitive et écriture sur disque de toutes les opérations dans les tables `ventes`, `lignes_vente`, `produits`, `dettes`, `clients`, `paiements`.
+- **Lignes 301-306 : `catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }`**  
+  Filet de sécurité absolu : capture toute erreur ou exception, annule intégralement la transaction via `rollBack()` (aucun stock débité, aucune vente fantôme, aucun encours altéré) et propage l'exception vers le contrôleur pour affichage à l'utilisateur.
+
+---
+
+### 🔍 Méthode 3 : `DebtService::enregistrerRemboursement()` (Recouvrement & Cycle de Vie des Dettes)
+
+- **Fichier** : `src/Service/DebtService.php` (Lignes 32 à 114)
+- **Rôle Métier** : Traiter l'encaissement d'un remboursement (partiel ou total) sur une créance client. Elle met à jour le solde restant de la dette, recalcule son statut (commutation automatique en `SOLDEE` dès que le reste dû atteint 0 FCFA), historise le reçu de versement dans la table des paiements, et décrémente instantanément l'encours global du client pour restaurer son plafond de crédit disponible.
+- **Rôle Technique** :
+  - Contrôles de validation des entrées (montant strictement positif, rejet si dette déjà soldée, rejet si montant supérieur au reste dû).
+  - Encadrement sous **Transaction PDO atomique** (`beginTransaction()`, `commit()`, `rollBack()`).
+  - Persistance de l'entité `Paiement` avec horodatage, canal d'encaissement et agent encaisseur.
+  - Calcul arithmétique précis avec `round(..., 2)` pour éviter les erreurs d'arrondis en virgule flottante.
+  - Mise à jour synchronisée des tables `paiements`, `dettes` et `clients`.
+  - Renvoi d'un tableau de rapport d'exécution structuré pour le contrôleur et la vue.
+
+#### 📜 Extrait de Code Réel :
+
+```php
+// Extrait de src/Service/DebtService.php
+
+public function enregistrerRemboursement(
+    int $detteId,
+    float $montant,
+    int $modePaiementId,
+    int $userId = 1,
+    ?string $reference = null
+): array {
+    // 1. Contrôles préalables stricts
+    if ($montant <= 0) {
+        throw new InvalidArgumentException("Le montant du remboursement doit être strictement supérieur à zéro.");
+    }
+
+    $dette = $this->detteRepository->findById($detteId);
+    if (!$dette) {
+        throw new InvalidArgumentException("La dette #DT-{$detteId} est introuvable.");
+    }
+
+    if ($dette->estSoldee() || $dette->getMontantRestant() <= 0) {
+        throw new RuntimeException("Cette dette est déjà intégralement soldée.");
+    }
+
+    if ($montant > $dette->getMontantRestant()) {
+        throw new InvalidArgumentException(
+            sprintf(
+                "Le montant du versement (%s FCFA) ne peut pas excéder le reste dû (%s FCFA).",
+                number_format($montant, 0, ',', ' '),
+                number_format($dette->getMontantRestant(), 0, ',', ' ')
+            )
+        );
+    }
+
+    // 2. Démarrage de la transaction PDO
+    $this->pdo->beginTransaction();
+
+    try {
+        // A. Enregistrement du reçu de paiement
+        $paiement = new Paiement(
+            detteId: $detteId,
+            montant: $montant,
+            datePaiement: new DateTime(),
+            modePaiementId: $modePaiementId,
+            referencePaiement: $reference,
+            userId: $userId
+        );
+
+        $this->detteRepository->savePaiement($paiement);
+
+        // B. Recalcul arithmétique du solde et transition d'état
+        $nouveauReste = max(0.0, round($dette->getMontantRestant() - $montant, 2));
+
+        if ($nouveauReste <= 0.0) {
+            $statutId = 2; // SOLDEE
+        } elseif ($dette->estEnRetard()) {
+            $statutId = 3; // EN_RETARD
+        } else {
+            $statutId = 1; // NON_SOLDEE
+        }
+
+        $this->detteRepository->updateMontantRestantEtStatut($detteId, $nouveauReste, $statutId);
+
+        // C. Décrémentation atomique de l'encours global du client
+        $this->clientRepository->diminuerDette($dette->getClientId(), $montant);
+
+        // D. Validation transactionnelle
+        $this->pdo->commit();
+
+        $estSoldee = ($nouveauReste <= 0.0);
+        $message = $estSoldee
+            ? "Dette #DT-{$detteId} intégralement soldée avec succès !"
+            : "Versement de " . number_format($montant, 0, ',', ' ') . " FCFA enregistré. Reste dû : " . number_format($nouveauReste, 0, ',', ' ') . " FCFA.";
+
+        return [
+            'success' => true,
+            'dette_id' => $detteId,
+            'paiement_id' => $paiement->getId(),
+            'montant_verse' => $montant,
+            'nouveau_reste' => $nouveauReste,
+            'est_soldee' => $estSoldee,
+            'statut_id' => $statutId,
+            'client_id' => $dette->getClientId(),
+            'message' => $message
+        ];
+    } catch (Throwable $e) {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+```
+
+#### 🔬 Explication Ligne par Ligne :
+
+- **Lignes 39-41 : `if ($montant <= 0) throw new InvalidArgumentException(...)`**  
+  Rejette immédiatement les montants nuls ou négatifs, empêchant les opérations financières frauduleuses ou erronées.
+- **Lignes 43-46 : `$dette = $this->detteRepository->findById($detteId);`**  
+  Recherche la créance en base avec ses jointures (client, statut, vente d'origine). Lève une exception si l'identifiant n'existe pas.
+- **Lignes 48-50 : `if ($dette->estSoldee() || $dette->getMontantRestant() <= 0)`**  
+  Garde-fou métier interdisant tout versement superflu sur une dette déjà éteinte.
+- **Lignes 52-60 : `if ($montant > $dette->getMontantRestant())`**  
+  Vérifie que l'acompte ne dépasse pas le solde exact restant dû. Formate un message d'erreur clair avec séparateurs de milliers.
+- **Ligne 62 : `$this->pdo->beginTransaction();`**  
+  Ouvre la transaction PDO pour garantir que l'historisation du versement, la mise à jour de la dette et la diminution du risque client s'exécutent de façon 100% indivisible.
+- **Lignes 65-74 : Création et persistance du `Paiement`**  
+  Instancie l'entité POO `Paiement` avec le constructeur typé PHP 8 (arguments nommés), horodatée à la date/heure actuelle (`new DateTime()`), et persiste en base via `$this->detteRepository->savePaiement($paiement)`.
+- **Ligne 76 : `$nouveauReste = max(0.0, round($dette->getMontantRestant() - $montant, 2));`**  
+  Calcule la différence et applique `round(..., 2)` pour se prémunir des imprécisions IEEE 754 de calcul flottant. `max(0.0, ...)` garantit qu'un solde ne devienne jamais négatif.
+- **Lignes 78-84 : Machine à états (Transition de statut)**  
+  - Si `nouveauReste <= 0.0` : le statut bascule automatiquement vers `SOLDEE` (ID 2).
+  - Sinon, si la date d'échéance est dépassée (`$dette->estEnRetard()`), le statut passe à `EN_RETARD` (ID 3).
+  - Sinon, le statut reste `NON_SOLDEE` (ID 1).
+- **Ligne 86 : `$this->detteRepository->updateMontantRestantEtStatut(...)`**  
+  Met à jour la ligne SQL dans la table `dettes` via requête préparée.
+- **Ligne 88 : `$this->clientRepository->diminuerDette($dette->getClientId(), $montant);`**  
+  **Instruction clé d'intégrité financière** : décrémente `total_dettes_actuelles` dans la table `clients`. Cela augmente immédiatement le crédit disponible calculé (`limite_credit - total_dettes_actuelles`) pour les futurs achats du client.
+- **Ligne 90 : `$this->pdo->commit();`**  
+  Valide définitivement la transaction SQL.
+- **Lignes 92-107 : Construction du rapport de résultat**  
+  Formate un tableau associatif complet avec les métriques mises à jour, utilisé par le contrôleur (`DetteController`) pour générer les notifications Flash et actualiser l'affichage.
+- **Lignes 108-113 : Gestion des erreurs & Rollback**  
+  Capture toute exception `Throwable`, annule la transaction si active et propage l'erreur sans laisser de données partiellement écrites.
+
