@@ -2,9 +2,15 @@
 
 namespace App\Core;
 
+use App\Controller\AuthController;
 use App\Controller\DetteController;
 use App\Controller\POSController;
 use App\Controller\SupplyController;
+use App\Model\Repository\CategorieRepository;
+use App\Model\Repository\ClientRepository;
+use App\Model\Repository\FournisseurRepository;
+use App\Model\Repository\ProduitRepository;
+use App\Service\VenteService;
 
 class Router
 {
@@ -12,6 +18,11 @@ class Router
 
     public function registerDefaultRoutes(): void
     {
+        $this->get('/login', AuthController::class, 'login');
+        $this->post('/login', AuthController::class, 'login');
+        $this->get('/logout', AuthController::class, 'logout');
+        $this->post('/logout', AuthController::class, 'logout');
+
         $this->get('/', POSController::class, 'index');
         $this->get('/pos', POSController::class, 'index');
         $this->match(['GET', 'POST'], '/pos/ajouter', POSController::class, 'ajouterArticle');
@@ -30,6 +41,38 @@ class Router
         $this->match(['GET', 'POST'], '/approvisionnements/receptionner', SupplyController::class, 'receptionner');
         $this->match(['GET', 'POST'], '/supplies/creer', SupplyController::class, 'creer');
         $this->match(['GET', 'POST'], '/approvisionnements/creer', SupplyController::class, 'creer');
+
+        $this->get('/dashboard', function() {
+            SessionManager::start();
+            $venteService = new VenteService();
+            $statistiques = $venteService->getStatistiquesDuJour();
+            $ventesRecentes = $venteService->getVentesDuJour();
+            require __DIR__ . '/../views/dashboard/index.php';
+        });
+
+        $this->get('/catalog', function() {
+            SessionManager::start();
+            $produitRepo = new ProduitRepository();
+            $clientRepo = new ClientRepository();
+            $fournisseurRepo = new FournisseurRepository();
+            $produits = $produitRepo->findAll();
+            $clients = $clientRepo->findAll();
+            $fournisseurs = $fournisseurRepo->findAll();
+            $valeurStock = $produitRepo->getValeurTotaleStock();
+            require __DIR__ . '/../views/catalogue/index.php';
+        });
+
+        $this->get('/catalogue', function() {
+            SessionManager::start();
+            $produitRepo = new ProduitRepository();
+            $clientRepo = new ClientRepository();
+            $fournisseurRepo = new FournisseurRepository();
+            $produits = $produitRepo->findAll();
+            $clients = $clientRepo->findAll();
+            $fournisseurs = $fournisseurRepo->findAll();
+            $valeurStock = $produitRepo->getValeurTotaleStock();
+            require __DIR__ . '/../views/catalogue/index.php';
+        });
     }
 
     public function get(string $path, string|callable $controller, ?string $action = null): void

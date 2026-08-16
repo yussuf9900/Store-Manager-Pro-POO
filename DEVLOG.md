@@ -511,3 +511,61 @@
   - *Gestion des écarts de livraison* : Le service supporte la réception partielle ou ajustée via le tableau `$quantitesLivrees`, permettant au gestionnaire de stock de saisir la quantité physique réellement constatée lors du déchargement.
 
 ---
+
+#### Step 3.3 (14h30 - 16h30) : AuthManager & Contrôle des Rôles
+
+- **Commit Git associé** : `git commit -m "feat(auth): implementation de l'authentification multi-profils et restriction des acces par role"`
+- **Heure de réalisation** : 14h30 - 16h30
+- **Ce qui a été fait** :
+
+  1. **Couche d'Accès aux Données Utilisateurs (`src/Model/Repository/UserRepository.php`)** :
+     - Implémentation de `UserRepository` héritant de `AbstractRepository` avec requêtes préparées PDO et jointure sur la table `roles` :
+       - `findById(int $id)` et `findByEmail(string $email)` avec gestion de la casse et résolution croisée des domaines de démonstration (`@storemanager.sn` et `@storemanager.pro`).
+       - `findByRole(int $roleId)` et `findByRoleCode(string $code)` avec filtrage automatique sur les comptes actifs (`u.actif = true`).
+       - `save(User $user)` (Insertion / Mise à jour avec hachage sécurisé et gestion des types booléens multi-SGBD), `delete(int $id)`, `count()`.
+       - Hydratation complète de l'entité `User` avec son entité `Role` associée (`id`, `code`, `libelle`, `description`).
+
+  2. **Service Centralisé d'Authentification & Contrôle d'Accès RBAC (`src/Service/AuthManager.php`)** :
+     - `authenticate(string $email, string $password): ?User` :
+       - Validation stricte des entrées (email et mot de passe non vides).
+       - Recherche utilisateur et contrôle du statut actif (`isActif()`).
+       - Vérification cryptographique du mot de passe avec `password_verify($password, $hash)`.
+       - Enregistrement en session via `SessionManager::setUser()` et stockage des variables de session (`user_id`, `user_nom`, `user_prenom`, `user_email`, `user_role`, `user_role_id`).
+       - Régénération sécurisée de l'ID de session (`SessionManager::regenerateId(true)`) pour contrer les attaques par fixation de session.
+     - `authenticateQuickProfile(string $roleCode): ?User` :
+       - Connexion instantanée sans mot de passe pour les 4 profils de démonstration du prototype (*Admin Boutique*, *Chargé de Vente*, *Chargé de Stock*, *Inventaire*).
+     - `logout(): void` :
+       - Déconnexion et destruction complète de la session.
+     - Contrôle des Habilitations RBAC (Role-Based Access Control) :
+       - `hasRole(string|array $roles): bool` : Vérifie les habilitations avec accès super-utilisateur accordé au profil `ADMIN`.
+       - `requireRole(string|array $roles): User` : Guard / filtre d'interception bloquant les accès non autorisés et effectuant les redirections avec messages flash d'erreur.
+       - `getDefaultRouteForUser(?User $user = null): string` : Détermine l'URL d'atterrissage adaptée à chaque métier (`ADMIN` $\rightarrow$ `/dashboard`, `VENTE` $\rightarrow$ `/pos`, `STOCK` $\rightarrow$ `/supplies`, `INVENTAIRE` $\rightarrow$ `/catalog`).
+
+  3. **Contrôleur Web & Routage d'Authentification (`src/Controller/AuthController.php` & `src/Core/Router.php`)** :
+     - `login()` : Traitement GET (affichage de la vue de connexion) et POST (authentification email/mot de passe ou profil rapide), génération des messages flash (`SessionManager::setFlash`) et redirection HTTP.
+     - `logout()` : Déconnexion de l'utilisateur et redirection vers `/login`.
+     - Déclaration des routes `GET /login`, `POST /login`, `GET /logout`, `POST /logout` dans `Router.php`.
+
+  4. **Adaptation Dynamique de la Barre de Navigation (`src/views/layout/navbar.php`)** :
+     - Filtrage conditionnel des onglets selon les droits du profil connecté :
+       - Profil `ADMIN` : Accès à l'intégralité des onglets (*Tableau de Bord*, *Ventes / POS*, *Gestion Dettes*, *Approvisionnements*, *Produits & Tiers*).
+       - Profil `VENTE` : Accès limité aux onglets *Ventes / POS* et *Gestion Dettes*.
+       - Profil `STOCK` : Accès limité aux onglets *Approvisionnements* et *Produits & Tiers*.
+       - Profil `INVENTAIRE` : Accès limité à l'onglet *Produits & Tiers*.
+     - Affichage du rôle et du nom d'utilisateur actif avec bouton fonctionnel `Déconnexion 🚪` vers `/logout`.
+
+  5. **Écran de Connexion Split-Screen Dynamique (`src/views/auth/login.php`)** :
+     - Préservation stricte de la structure visuelle haut de gamme issue de `storemanager_pro_app.html` (lignes 380 à 480).
+     - Prise en charge des 4 cartes de profils rapides cliquables (`AB`, `CV`, `CS`, `IV`), du formulaire classique et de l'affichage des notifications flash d'erreur/succès.
+
+  6. **Suite de Tests Automatisés (`tests/test_auth.php`)** :
+     - Batterie de tests couvrant 48 assertions validées à 100% : consultation et hydratation `UserRepository`, authentification valide/invalide `AuthManager`, 4 profils de démonstration, vérifications RBAC `hasRole` et `requireRole`, instanciation et actions `AuthController`, rendu dynamique de la barre de navigation selon chaque rôle.
+     - **Résultat : 48/48 tests validés avec succès (0 échec)**.
+
+- **Difficultés / Obstacles & Solutions d'Architecture** :
+  - *Gestion multi-SGBD du type booléen (`actif`)* : En PostgreSQL, la colonne `actif` est typée `BOOLEAN` alors qu'en SQLite elle est représentée par `INTEGER (0/1)`. Les requêtes préparées ont été adaptées avec `bindValue(':actif', ..., PDO::PARAM_BOOL)` et `u.actif = true` afin d'assurer une compatibilité native sur les deux moteurs.
+  - *Sécurité et étanchéité des sessions* : La méthode `AuthManager::loginUser()` appelle systématiquement `SessionManager::regenerateId(true)` dès qu'une authentification réussit, empêchant le vol de session (Session Fixation).
+  - *Fluidité multi-profils* : Le système de profils rapides permet de basculer instantanément entre les 4 profils métiers lors des démonstrations et des évaluations tout en respectant l'authentification formelle sous-jacente.
+
+---
+

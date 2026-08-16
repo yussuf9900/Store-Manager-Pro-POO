@@ -171,6 +171,18 @@
                     Choisissez un profil de démonstration ou saisissez vos identifiants.
                 </p>
 
+                <?php if (!empty($flashError)): ?>
+                    <div style="background: rgba(248, 113, 113, 0.15); border: 1px solid var(--danger); color: #fca5a5; padding: 12px 16px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <span>⚠️</span> <?= is_array($flashError) ? htmlspecialchars(implode(', ', $flashError)) : htmlspecialchars($flashError) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($flashSuccess)): ?>
+                    <div style="background: rgba(52, 211, 153, 0.15); border: 1px solid var(--success); color: #86efac; padding: 12px 16px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <span>✅</span> <?= is_array($flashSuccess) ? htmlspecialchars(implode(', ', $flashSuccess)) : htmlspecialchars($flashSuccess) ?>
+                    </div>
+                <?php endif; ?>
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
                     <div onclick="selectQuickProfile('admin', 'admin@storemanager.sn', '👑 Admin Boutique')" class="quick-profile-card active" id="profile-card-admin">
                         <div style="width: 40px; height: 40px; background: rgba(45, 212, 191, 0.15); border: 1px solid var(--accent); border-radius: 10px; font-size: 12px; font-weight: 800; color: var(--accent); display: flex; align-items: center; justify-content: center;">AB</div>
