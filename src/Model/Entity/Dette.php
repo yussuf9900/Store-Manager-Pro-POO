@@ -239,6 +239,24 @@ class Dette
         return $total;
     }
 
+    public function getMontantInitial(): float
+    {
+        return $this->montantTotal;
+    }
+
+    public function getMontantPaye(): float
+    {
+        return max(0.0, $this->montantTotal - $this->montantRestant);
+    }
+
+    public function getPourcentageRembourse(): float
+    {
+        if ($this->montantTotal <= 0) {
+            return 100.0;
+        }
+        return round(($this->getMontantPaye() / $this->montantTotal) * 100, 1);
+    }
+
     public function estSoldee(): bool
     {
         return $this->montantRestant <= 0.0 || ($this->statut !== null && $this->statut->isSoldee());
@@ -258,3 +276,4 @@ class Dette
         return $now > $this->dateEcheance;
     }
 }
+

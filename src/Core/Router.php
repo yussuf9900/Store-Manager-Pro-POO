@@ -2,6 +2,7 @@
 
 namespace App\Core;
 
+use App\Controller\DetteController;
 use App\Controller\POSController;
 
 class Router
@@ -17,6 +18,10 @@ class Router
         $this->match(['GET', 'POST'], '/pos/supprimer', POSController::class, 'supprimerArticle');
         $this->match(['GET', 'POST'], '/pos/vider', POSController::class, 'viderPanier');
         $this->match(['GET', 'POST'], '/pos/valider', POSController::class, 'validerVente');
+
+        $this->get('/dettes', DetteController::class, 'index');
+        $this->match(['GET', 'POST'], '/dettes/rembourser', DetteController::class, 'rembourser');
+        $this->get('/dettes/{id}', DetteController::class, 'details');
     }
 
     public function get(string $path, string|callable $controller, ?string $action = null): void

@@ -397,17 +397,66 @@
          - `src/views/approvisionnements/index.php` : Registre des réceptions fournisseurs avec modale de saisie de Bon de Livraison (BL).
          - `src/views/catalogue/index.php` : Gestion des répertoires produits, clients (avec plafonds de crédit) et fournisseurs.
 
-  6. **Suite de Tests de Non-Régression des Vues (`tests/test_views.php`)** :
+  6. **Suite de Tests de Non-Regréssion des Vues (`tests/test_views.php`)** :
      - Vérification de l'instanciation et du rendu HTML de chaque vue découpée sans notice ni warning PHP.
      - **Résultat : 6/6 tests de vues validés**.
 
   7. **Refactorisation & Encapsulation du Routage HTTP (`src/Core/Router.php`)** :
      - Ajout de la méthode `$router->match(array $methods, string $path, string|callable $controller, ?string $action = null)` permettant d'enregistrer des routes multi-verbes (`GET` et `POST`) sans duplication de code.
-     - Ajout de `Router::registerDefaultRoutes()` qui centralise l'intégralité des routes de l'application (`/`, `/pos`, `/pos/ajouter`, `/pos/quantite`, `/pos/supprimer`, `/pos/vider`, `/pos/valider`, `/pos/facture/{id}`).
-     - Allègement maximal de `public/index.php` réduit à 11 lignes limpides.
+     - Centralisation de l'enregistrement des routes dans `Router::registerDefaultRoutes()`.
+
+---
+
+### [Dimanche - Phase 3] : Dettes, Approvisionnements, Rôles & Clôture
+
+---
+
+#### Step 3.1 (09h00 - 11h30) : Gestion des Dettes & Remboursements
+
+- **Heure de réalisation** : 09h00 - 11h30
+- **Ce qui a été fait** :
+
+  1. **Couche d'Accès aux Données Dette & Versements (src/Model/Repository/DetteRepository.php)** :
+     - Implémentation complète de DetteRepository héritant de AbstractRepository :
+       - findById(int $id) : Chargement complet d'une dette avec jointures clients, statuts_dette, ventes, ainsi que les collections de règlements paiements[] et les articles vendus lignes_vente[].
+       - findAll() et findDettesActives() : Récupération des dettes en cours (montant_restant > 0 et statut_id != 2).
+       - findByClient(int $clientId) et findByStatut(int $statutId).
+       - findEnRetard() : Détection des créances échues non réglées.
+       - save(Dette $dette) et updateMontantRestantEtStatut(int $detteId, float $montantRestant, int $statutId).
+       - savePaiement(Paiement $paiement) et findPaiementsByDetteId(int $detteId) : Enregistrement et historisation des règlements.
+       - findLignesVenteByVenteId(int $venteId) : Récupération des articles d'origine de la vente à crédit.
+       - Agrégats financiers : getTotalEncours(), getTotalRecouvrements(), getTotalCreancesInitiales(), countActives(), countSoldees().
+
+  2. **Service Métier Transactionnel de Recouvrement (src/Service/DebtService.php)** :
+     - Contrôles de validité stricts : rejet des montants nuls ou négatifs, rejet des versements sur une dette déjà soldée, blocage si le versement excède le reste dû.
+     - Transaction PDO atomique (beginTransaction / commit / rollBack) :
+       - Insertion du règlement dans la table paiements.
+       - Calcul du nouveau reste dû et bascule automatique en statut SOLDEE (ID 2) dès que nouveauReste <= 0.0.
+       - Décrémentation atomique de l'encours client dans clients via ClientRepository::diminuerDette() pour libérer immédiatement son plafond de crédit disponible.
+       - Méthode de règlement total soldeTotalDette() et calcul des statistiques de recouvrement getStatistiquesDettes().
+
+  3. **Contrôleur Web Synchrone (src/Controller/DetteController.php)** :
+     - Fonctionnement 100% MVC synchrone :
+       - index() : Récupération des dettes et des statistiques financières pour injection dans la vue.
+       - rembourser() : Traitement des données POST, exécution du service de remboursement, enregistrement des messages flash de notification dans SessionManager, et redirection HTTP standard (Location: /dettes).
+
+  4. **Enregistrement des Routes (src/Core/Router.php)** :
+     - Enregistrement des routes GET /dettes et POST /dettes/rembourser dans Router::registerDefaultRoutes().
+
+  5. **Interface Utilisateur Conforme au Prototype (src/views/dettes/index.php)** :
+     - Reprise exacte du template issu de storemanager_pro_app.html (lignes 1475 à 1897) purement dynamisé :
+       - 3 cartes de statistiques : Créances Actives, Clients Débiteurs, Total Recouvrements.
+       - Registre des dettes avec filtrage de recherche instantané.
+       - 3 tiroirs d'actions activables par ligne :
+         - Articles : Affiche le tableau des produits de la vente à crédit (Produit, Qté, P.U., Sous-total).
+         - Paiements : Affiche l'historique des règlements enregistrés (Date, Versement, Mode).
+         - Rembourser : Formulaire de remboursement POST /dettes/rembourser avec boutons raccourcis (Tout solder, 50%), champ montant pré-rempli et sélecteur de canal de paiement (Cash, Wave, OM, Carte).
+
+  6. **Suite de Tests Automatisés (tests/test_debt_service.php)** :
+     - Batterie de tests couvrant 42 assertions validées avec 100% de succès.
 
 - **Difficultés / Obstacles & Solutions d'Architecture** :
-  - *Découplage Web/Métier rigoureux* : `POSController` s'occupe exclusivement du protocole HTTP, de la session (`$_SESSION` via `SessionManager`) et des formats de sortie, tandis que `VenteService` conserve l'intégralité de la logique métier et transactionnelle PDO.
-  - *Compatibilité SQL Multi-SGBD* : Utilisation de la syntaxe SQL `WHERE est_actif = TRUE` pour assurer une compatibilité absolue à la fois sur PostgreSQL et SQLite.
+  - Atomicité multi-tables lors du remboursement : Un versement impacte simultanément les tables paiements, dettes et clients. L'encadrement dans une transaction PDO unifiée garantit l'intégrité absolue sans incohérence financière.
+  - Rendu modulaire et ergonomie sans AJAX : L'utilisation de tiroirs locaux en CSS/JS (toggleDetails) combinée au pattern Post-Redirect-Get offre une expérience utilisateur fluide tout en respectant l'architecture MVC synchrone standard.
 
 ---
