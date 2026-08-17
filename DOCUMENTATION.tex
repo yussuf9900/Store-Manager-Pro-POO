@@ -1,0 +1,1434 @@
+\documentclass[11pt,a4paper,titlepage,twoside,openright]{report}
+
+% ==============================================================================
+% PRÉAMBULE & PACKAGES FONDAMENTAUX
+% ==============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.8cm, right=2.5cm, headheight=15pt]{geometry}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable,listings}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,calc,fit,backgrounds}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% ==============================================================================
+% PALETTE DE COULEURS PROFESSIONNELLE
+% ==============================================================================
+\definecolor{primaryNavy}{RGB}{26, 54, 93}      % Bleu Marine Profond #1A365D
+\definecolor{primaryBlue}{RGB}{43, 108, 176}    % Bleu Océan #2B6CB0
+\definecolor{accentGold}{RGB}{214, 158, 46}     % Or / Ambre #D69E2E
+\definecolor{darkSlate}{RGB}{45, 55, 72}        % Ardoise Foncé #2D3748
+\definecolor{lightBg}{RGB}{247, 250, 252}       % Fond Gris Très Clair #F7FAFC
+\definecolor{codeBg}{RGB}{248, 249, 250}        % Fond Code #F8F9FA
+\definecolor{codeComment}{RGB}{108, 117, 125}   % Gris Commentaire
+\definecolor{codeKeyword}{RGB}{114, 9, 183}     % Violet Mots-clés
+\definecolor{codeString}{RGB}{46, 139, 87}      % Vert Émeraude Chaînes
+\definecolor{codeVar}{RGB}{199, 43, 98}         % Magenta Variables
+\definecolor{alertRed}{RGB}{197, 48, 48}        % Rouge Alerte
+\definecolor{successGreen}{RGB}{47, 133, 90}    % Vert Succès
+
+% ==============================================================================
+% CONFIGURATION HYPERREF
+% ==============================================================================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryBlue,
+    citecolor=primaryBlue,
+    filecolor=primaryNavy,
+    urlcolor=primaryBlue,
+    pdftitle={StoreManager Pro — Documentation Technique \& Architecturale},
+    pdfauthor={Youssou SALL},
+    pdfsubject={Architecture Logicielle PHP 8.2+ POO Pure & ERP/POS},
+    pdfkeywords={PHP, POO, MVC, ERP, POS, PostgreSQL, SQLite, RBAC, Design Patterns},
+    bookmarksnumbered=true,
+    pdfstartview={FitH}
+}
+
+% ==============================================================================
+% CONFIGURATION DES EN-TÊTES ET PIEDS DE PAGE (FANCYHDR)
+% ==============================================================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\bfseries\color{primaryNavy}\thepage}
+\fancyhead[LO]{\nouppercase{\color{primaryBlue}\rightmark}}
+\fancyhead[RE]{\nouppercase{\color{primaryNavy}\leftmark}}
+\fancyfoot[C]{\footnotesize\color{darkSlate}StoreManager Pro — ERP Commercial \& Point de Vente (PHP POO Pure)}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\fancypagestyle{plain}{
+    \fancyhf{}
+    \fancyfoot[C]{\bfseries\color{primaryNavy}\thepage}
+    \renewcommand{\headrulewidth}{0pt}
+    \renewcommand{\footrulewidth}{0pt}
+}
+
+% ==============================================================================
+% CONFIGURATION DES TITRES DE SECTIONS
+% ==============================================================================
+\titleformat{\chapter}[display]
+{\normalfont\huge\bfseries\color{primaryNavy}}
+{\filleft\Huge\color{accentGold}\textbf{CHAPITRE \thechapter}}
+{1ex}
+{\titlerule[1.5pt]\vspace{1ex}\filright}
+[\vspace{1ex}\titlerule]
+
+\titleformat{\section}
+{\normalfont\Large\bfseries\color{primaryBlue}}
+{\thesection}{1em}{}
+
+\titleformat{\subsection}
+{\normalfont\large\bfseries\color{darkSlate}}
+{\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+{\normalfont\normalsize\bfseries\color{primaryNavy}}
+{\thesubsubsection}{1em}{}
+
+% ==============================================================================
+% CONFIGURATION DU LISTING DE CODE (LISTINGS)
+% ==============================================================================
+\lstset{
+    backgroundcolor=\color{codeBg},
+    basicstyle=\ttfamily\footnotesize\color{darkSlate},
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{codeComment}\itshape,
+    escapeinside={\%*}{*)},
+    extendedchars=true,
+    frame=single,
+    frameround=tttt,
+    framesep=4pt,
+    rulecolor=\color{primaryBlue!30},
+    keepspaces=true,
+    keywordstyle=\color{codeKeyword}\bfseries,
+    language=PHP,
+    morekeywords={declare, strict_types, namespace, use, class, extends, implements, interface, trait, abstract, final, public, private, protected, readonly, function, return, match, fn, throw, try, catch, finally, new, null, true, false, string, int, float, bool, array, mixed, void, object, self, parent, static},
+    numbers=left,
+    numbersep=8pt,
+    numberstyle=\tiny\color{codeComment},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    stringstyle=\color{codeString},
+    tabsize=4,
+    xleftmargin=12pt,
+    xrightmargin=5pt
+}
+
+% Style spécifique pour le code SQL
+\lstdefinestyle{sqlstyle}{
+    language=SQL,
+    basicstyle=\ttfamily\footnotesize\color{darkSlate},
+    keywordstyle=\color{primaryBlue}\bfseries,
+    morekeywords={CREATE, TABLE, PRIMARY, KEY, FOREIGN, REFERENCES, ON, DELETE, CASCADE, RESTRICT, SET, NULL, CHECK, DEFAULT, NOT, UNIQUE, CONSTRAINT, INSERT, INTO, VALUES, UPDATE, SELECT, FROM, WHERE, JOIN, LEFT, INNER, ORDER, BY, GROUP, HAVING, PRAGMA, BEGIN, TRANSACTION, COMMIT, ROLLBACK, NUMERIC, SERIAL, INT, VARCHAR, TEXT, TIMESTAMP, BOOLEAN},
+    stringstyle=\color{codeString},
+    commentstyle=\color{codeComment}\itshape
+}
+
+% ==============================================================================
+% BOÎTES D'INFORMATION PERSONNALISÉES (TCOLORBOX)
+% ==============================================================================
+\newtcolorbox{metierbox}[1]{
+    enhanced,
+    colback=lightBg,
+    colframe=primaryNavy,
+    coltitle=white,
+    fonttitle=\bfseries\sffamily,
+    title={#1},
+    boxrule=1pt,
+    arc=4pt,
+    left=10pt, right=10pt, top=8pt, bottom=8pt,
+    drop shadow=black!10
+}
+
+\newtcolorbox{alertbox}[1]{
+    enhanced,
+    colback=alertRed!5,
+    colframe=alertRed,
+    coltitle=white,
+    fonttitle=\bfseries\sffamily,
+    title={Règle d'Invariance Critique : #1},
+    boxrule=1pt,
+    arc=4pt,
+    left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+\newtcolorbox{oralbox}[1]{
+    enhanced,
+    colback=accentGold!10,
+    colframe=accentGold!80!black,
+    coltitle=white,
+    fonttitle=\bfseries\sffamily,
+    title={Conseil Soutenance Orale \& Questions Pièges : #1},
+    boxrule=1pt,
+    arc=4pt,
+    left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+\newtcolorbox{solidbox}[1]{
+    enhanced,
+    colback=primaryBlue!5,
+    colframe=primaryBlue,
+    coltitle=white,
+    fonttitle=\bfseries\sffamily,
+    title={Principe SOLID Appliqué : #1},
+    boxrule=1pt,
+    arc=4pt,
+    left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+% ==============================================================================
+% DOCUMENT PRINCIPAL
+% ==============================================================================
+\begin{document}
+
+% ------------------------------------------------------------------------------
+% PAGE DE GARDE
+% ------------------------------------------------------------------------------
+\begin{titlepage}
+    \begin{tikzpicture}[remember picture,overlay]
+        \fill[primaryNavy] (current page.north west) rectangle ([xshift=1.2cm]current page.south west);
+        \fill[accentGold] ([xshift=1.2cm]current page.north west) rectangle ([xshift=1.5cm]current page.south west);
+    \end{tikzpicture}
+    
+    \vspace{-1.5cm}
+    \begin{flushright}
+        \Huge\textbf{\color{primaryNavy}StoreManager Pro}\\[0.3cm]
+        \Large\textbf{\color{primaryBlue}ERP Commercial \& Système de Point de Vente (POS)}\\[0.2cm]
+        \normalsize\textcolor{darkSlate}{Architecture Logicielle Pure From Scratch en PHP 8.2+ POO}
+    \end{flushright}
+    
+    \vspace{1.5cm}
+    
+    \begin{center}
+        \begin{tcolorbox}[
+            enhanced,
+            colback=primaryNavy!5,
+            colframe=primaryNavy,
+            width=0.9\textwidth,
+            arc=6pt,
+            boxrule=1.5pt,
+            center,
+            halign=center,
+            top=15pt, bottom=15pt
+        ]
+            \huge\bfseries\color{primaryNavy}DOCUMENTATION TECHNIQUE, ARCHITECTURALE ET CONCEPTUELLE\\[0.4cm]
+            \large\color{darkSlate}Guide d'Excellence, Modélisation UML, Autopsie du Code \& Préparation aux Épreuves Pratiques et Orales
+        \end{tcolorbox}
+    \end{center}
+    
+    \vspace{2.5cm}
+    
+    \begin{minipage}[t]{0.45\textwidth}
+        \textbf{\color{primaryNavy}\large Auteur du Projet :}\\[0.2cm]
+        \large\textbf{Youssou SALL}\\
+        \normalsize Concepteur \& Développeur Logiciel\\
+        \small Spécialité : Architectures Web \& POO Pure
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.45\textwidth}
+        \begin{flushright}
+            \textbf{\color{primaryNavy}\large Contexte \& Évaluation :}\\[0.2cm]
+            \textbf{Projet StoreManager Pro}\\
+            Épreuve Pratique Individuelle (10 min)\\
+            Soutenance Orale \& Test Live-Coding\\
+            \textbf{Statut :} 100\% Validé (294/294 Tests)
+        \end{flushright}
+    \end{minipage}
+    
+    \vfill
+    
+    \begin{center}
+        \rule{0.8\textwidth}{0.6pt}\\[0.3cm]
+        \color{darkSlate}\textbf{Version 1.0 — Année Académique 2026}
+    \end{center}
+\end{titlepage}
+
+% ------------------------------------------------------------------------------
+% LIMINAIRES : RÉSUMÉ & AVANT-PROPOS
+% ------------------------------------------------------------------------------
+\pagenumbering{roman}
+
+\chapter*{Résumé Exécutif}
+\addcontentsline{toc}{chapter}{Résumé Exécutif}
+
+Le présent document constitue le dossier de référence technique, architectural et pédagogique de l'application \textbf{StoreManager Pro}. Développée intégralement en \textbf{PHP 8.2+ Orienté Objet pur (From Scratch)}, sans recourir à aucun framework applicatif externe (ni Laravel, ni Symfony) ni outil d'ORM automatisé (Doctrine, Eloquent), cette solution logicielle matérialise l'intégration industrielle complète d'un \textbf{ERP Commercial} et d'une \textbf{Caisse Tactile de Point de Vente (POS)}.
+
+Ce mémoire technique a été conçu pour concilier deux exigences pédagogiques fondamentales :
+\begin{enumerate}
+    \item \textbf{Une rigueur académique et conceptuelle absolue} : démonstration mathématique et algorithmique des invariants métiers, modélisation relationnelle en Troisième Forme Normale (3FN), application stricte des cinq principes SOLID et implémentation fidèle des Design Patterns de référence (\emph{Singleton}, \emph{Repository}, \emph{Layered MVC}, \emph{Front Controller}).
+    \item \textbf{Une clarté d'exposition didactique et accessible} : vulgarisation progressive des notions d'architecture, autopsie ligne par ligne des méthodes critiques du système, mise en évidence des questions d'évaluation orale et résolution détaillée de dix exercices types de \emph{Live-Coding}.
+\end{enumerate}
+
+L'application repose sur un mécanisme de persistance hautement résilient articulant \textbf{PostgreSQL} (moteur transactionnel prioritaire de production) et un dispositif de secours automatique autonome vers \textbf{SQLite local} (\emph{Self-Healing}). L'ensemble de la logique métier, du cycle des créances et des flux transactionnels est couvert par une batterie de \textbf{294 assertions automatisées}, validant l'intégrité de la solution avec un taux de réussite parfait de 100\%.
+
+\vspace{1cm}
+\noindent\textbf{Mots-clés :} PHP 8.2+, Programmation Orientée Objet (POO), Clean Layered Architecture, Modèle-Vue-Contrôleur (MVC), Principes SOLID, Design Pattern Singleton, Repository Pattern, Contrôle d'Accès Basé sur les Rôles (RBAC), Transactions ACID, Haute Disponibilité SGBD, PostgreSQL, SQLite Fallback, Tests Automatisés.
+
+\clearpage
+
+% ------------------------------------------------------------------------------
+% TABLE DES MATIÈRES & LISTINGS
+% ------------------------------------------------------------------------------
+\tableofcontents
+\clearpage
+
+\listoffigures
+\addcontentsline{toc}{chapter}{Table des Figures}
+\vspace{0.5cm}
+
+\listoftables
+\addcontentsline{toc}{chapter}{Liste des Tableaux}
+\vspace{0.5cm}
+
+\lstlistoflistings
+\addcontentsline{toc}{chapter}{Liste des Extraits de Code}
+\clearpage
+
+\pagenumbering{arabic}
+
+% ==============================================================================
+% CHAPITRE 1 : CONTEXTE MÉTIER & SPÉCIFICATIONS FONCTIONNELLES
+% ==============================================================================
+\chapter{Contexte Métier, Problématique \& Spécifications Fonctionnelles}
+
+\section{Introduction Générale \& Enjeux du Commerce de Détail}
+
+Dans le secteur de la distribution et du commerce de détail contemporain, l'efficacité opérationnelle d'un point de vente dépend directement de la synchronisation instantanée entre l'encaissement en caisse, le contrôle du risque d'impayé client, et la chaîne d'approvisionnement en flux tendu. Un dysfonctionnement, même minime, dans cette chaîne peut entraîner des ruptures de stock imprévues, des ventes à perte, ou une dégradation irréversible de la trésorerie due à des créances non maîtrisées.
+
+Le projet \textbf{StoreManager Pro} a été conçu précisément pour répondre à ces impératifs de gestion à travers une architecture robuste et autonome. L'application unifie quatre piliers opérationnels au sein d'une même interface cohérente :
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    box/.style={rectangle, draw=primaryNavy, fill=primaryBlue!10, rounded corners=6pt, text width=3.2cm, minimum height=1.8cm, align=center, font=\small\bfseries},
+    centerbox/.style={rectangle, draw=accentGold, fill=accentGold!20, rounded corners=8pt, text width=3.5cm, minimum height=2.2cm, align=center, font=\bfseries\color{primaryNavy}},
+    arrow/.style={->, >=stealth, thick, primaryNavy}
+]
+    \node[centerbox] (core) at (0,0) {StoreManager Pro\\(Cœur Métier ERP/POS)};
+    
+    \node[box] (pos) at (-4,2.5) {Caisse POS \&\\Encaissement Multi-canal};
+    \node[box] (debt) at (4,2.5) {Gestion des Créances\\\& Plafonds de Crédit};
+    \node[box] (stock) at (-4,-2.5) {Approvisionnements \&\\Bons de Livraison (BL)};
+    \node[box] (rbac) at (4,-2.5) {Ségrégation des Rôles\\\& Audit Financier (RBAC)};
+    
+    \draw[arrow] (core) -- (pos);
+    \draw[arrow] (core) -- (debt);
+    \draw[arrow] (core) -- (stock);
+    \draw[arrow] (core) -- (rbac);
+\end{tikzpicture}
+\caption{Les quatre piliers fonctionnels intégrés de StoreManager Pro}
+\label{fig:piliers_erp}
+\end{figure}
+
+\section{Analyse des Processus Métiers \& Cas d'Utilisation}
+
+\subsection{1. Le Cycle d'Encaissement en Point de Vente (POS)}
+Le processus d'encaissement en caisse tactile constitue le point de contact le plus critique de l'ERP. Il obéit à des contraintes de rapidité et d'ergonomie strictes :
+\begin{itemize}
+    \item \textbf{Recherche instantanée multi-critères} : recherche d'articles par code-barres (lecture par douchette optique) ou par désignation textuelle, avec focalisation rapide via le raccourci clavier global \texttt{[F2]}.
+    \item \textbf{Gestion dynamique du panier} : incrémentation et décrémentation des quantités en temps réel, calcul immédiat des remises promotionnelles directes et mise à jour transparente des totaux bruts et nets.
+    \item \textbf{Encaissement multi-canal} : prise en charge native de cinq modes de règlement : \emph{Espèces (Cash)}, \emph{Wave}, \emph{Orange Money}, \emph{Carte Bancaire} et \emph{Vente à Crédit (Dette)}.
+    \item \textbf{Génération de factures et tickets thermiques} : édition automatique d'un ticket normalisé 80\,mm intégrant l'horodatage, le détail des lignes, les remises accordées, le mode de règlement et l'identité du vendeur.
+\end{itemize}
+
+\subsection{2. La Gestion du Risque Financier \& Recouvrement des Dettes}
+L'octroi de crédit commercial constitue un levier de fidélisation majeur mais représente un risque financier considérable. StoreManager Pro encadre cette pratique par des garde-fous stricts :
+\begin{itemize}
+    \item \textbf{Plafond de crédit individuel (\texttt{limite\_credit})} : chaque client se voit attribuer une limite financière maximale contractuelle.
+    \item \textbf{Calcul du crédit disponible} : le système recalcule en permanence la marge de manœuvre résiduelle du client via la formule mathématique :
+    \begin{equation}
+        \text{Crédit Disponible} = \max\left(0, \text{Limite de Crédit} - \text{Total des Dettes Actuelles}\right)
+    \end{equation}
+    \item \textbf{Blocage automatique préventif} : si le montant d'un nouvel achat à crédit excède le disponible client, l'ERP refuse catégoriquement l'enregistrement de la transaction et lève une exception métier explicite.
+    \item \textbf{Règlements partiels ou totaux} : enregistrement d'acomptes et de versements ultérieurs avec recalcul instantané du reste dû et bascule automatique du statut vers \texttt{SOLDEE} dès extinction de la créance.
+\end{itemize}
+
+\subsection{3. La Chaîne Logistique \& Réception des Marchandises (BL)}
+La tenue des stocks est synchronisée avec les réceptions physiques fournisseurs :
+\begin{itemize}
+    \item \textbf{Création de Bons de Livraison (BL)} : enregistrement des commandes d'achat avec référence fournisseur, coût d'acquisition unitaire et quantités attendues.
+    \item \textbf{Réception physique et réconciliation} : saisie des quantités réellement livrées lors du déchargement, recalcul du coût total d'achat et incrémentation immédiate et atomique des stocks disponibles.
+\end{itemize}
+
+\section{Matrice de Ségrégation des Responsabilités (RBAC)}
+
+Afin de garantir la sécurité des données et d'empêcher les fraudes internes, l'application implémente un modèle de \textbf{Contrôle d'Accès Basé sur les Rôles} (\emph{Role-Based Access Control} - RBAC). Quatre profils métiers étanches ont été formalisés :
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lccccX}
+\toprule
+\textbf{Profil Métier} & \textbf{Caisse POS} & \textbf{Recouvrement} & \textbf{Appro BL} & \textbf{Catalogue} & \textbf{Périmètre Fonctionnel} \\
+\midrule
+\textbf{Admin Boutique} & \textcolor{successGreen}{\textbf{Oui}} & \textcolor{successGreen}{\textbf{Oui}} & \textcolor{successGreen}{\textbf{Oui}} & \textcolor{successGreen}{\textbf{Oui}} & Contrôle total, KPIs globaux, gestion des utilisateurs, audit. \\
+\textbf{Chargé de Vente} & \textcolor{successGreen}{\textbf{Oui}} & \textcolor{successGreen}{\textbf{Oui}} & \textcolor{alertRed}{\textbf{Non}} & \textit{Lecture} & Encaissement, saisie des acomptes dettes, émission de tickets. \\
+\textbf{Chargé de Stock} & \textcolor{alertRed}{\textbf{Non}} & \textcolor{alertRed}{\textbf{Non}} & \textcolor{successGreen}{\textbf{Oui}} & \textcolor{successGreen}{\textbf{Oui}} & Réception physique des BL, saisie des prix d'achat, inventaire. \\
+\textbf{Inventaire} & \textcolor{alertRed}{\textbf{Non}} & \textcolor{alertRed}{\textbf{Non}} & \textcolor{alertRed}{\textbf{Non}} & \textit{Lecture} & Consultation d'audit, comptage physique, valorisation stock. \\
+\bottomrule
+\end{tabularx}
+\caption{Matrice d'Habilitation RBAC de StoreManager Pro}
+\label{tab:rbac_matrix}
+\end{table}
+
+\section{Modélisation UML des Cas d'Utilisation}
+
+Le diagramme de cas d'utilisation formalise les interactions entre les quatre acteurs humains et le système. Il met en lumière les relations d'inclusion (\texttt{<<include>>}) et d'extension (\texttt{<<extend>>}) :
+
+\begin{metierbox}{Justification Formelle des Relations UML}
+\begin{itemize}
+    \item \textbf{Inclusions obligatoires (\texttt{<<include>>})} :
+    \begin{itemize}
+        \item $\text{Valider la Vente} \xrightarrow{\ll\text{include}\gg} \text{Décrémenter le Stock}$ : Une transaction validée ne peut exister sans déstockage physique immédiat.
+        \item $\text{Valider la Vente} \xrightarrow{\ll\text{include}\gg} \text{Émettre le Ticket/Facture}$ : Toute vente donne lieu obligatoirement à une pièce justificative numérotée.
+        \item $\text{Enregistrer Paiement Dette} \xrightarrow{\ll\text{include}\gg} \text{Mettre à jour Statut (SOLDEE)}$ : Le recalcul de la créance implique automatiquement l'évaluation de son extinction.
+    \end{itemize}
+    \item \textbf{Extensions conditionnelles (\texttt{<<extend>>})} :
+    \begin{itemize}
+        \item $\text{Valider la Vente} \xleftarrow{\ll\text{extend}\gg} \text{Contrôler Limite de Crédit}$ : Cette vérification ne s'exécute \textbf{que si} le mode de règlement sélectionné est \emph{Dette / À Crédit}.
+        \item $\text{Valider la Vente} \xleftarrow{\ll\text{extend}\gg} \text{Sélectionner Client Nominatif}$ : Obligatoire pour les ventes à crédit, mais optionnel pour les ventes au comptoir anonymes.
+    \end{itemize}
+\end{itemize}
+\end{metierbox}
+
+% ==============================================================================
+% CHAPITRE 2 : FONDEMENTS THÉORIQUES & PRINCIPES SOLID
+% ==============================================================================
+\chapter{Fondements Théoriques, POO Pure \& Principes SOLID}
+
+\section{Philosophie du Développement PHP 8.2+ From Scratch}
+
+Développer une application commerciale d'envergure en \textbf{PHP 8.2+ pur sans framework} (From Scratch) est un choix d'ingénierie délibéré visant à maîtriser 100\% du cycle d'exécution du code. Contrairement aux environnements pré-packagés (Laravel, Symfony) qui masquent la plomberie technique sous des couches d'abstractions complexes (façades, conteneurs d'injection magiques, ORM ActiveRecord lourds), l'approche pure impose :
+\begin{itemize}
+    \item \textbf{La maîtrise du coût mémoire et CPU} : aucune surcharge superflue, exécution ultra-rapide adaptée aux machines d'encaissement modestes.
+    \item \textbf{L'application explicite des concepts fondamentaux} : typage fort, encapsulation stricte et routage déterministe.
+    \item \textbf{Une clarté d'audit absolue} : chaque ligne de code exécutée a été rédigée, comprise et testée personnellement.
+\end{itemize}
+
+\section{Typage Strict \& Fonctionnalités Modernes de PHP 8}
+
+L'ensemble de la base de code StoreManager Pro exploite les innovations majeures introduites dans PHP 8.0, 8.1 et 8.2 :
+\begin{enumerate}
+    \item \textbf{Typage strict des scalaires} (\texttt{declare(strict\_types=1);}) : interdiction formelle de la coercition implicite de types (ex: une chaîne \texttt{"10"} n'est jamais acceptée à la place d'un entier \texttt{10}).
+    \item \textbf{Constructeurs promotionnés} (\emph{Constructor Property Promotion}) : déclaration et initialisation simultanées des attributs de classe dans la signature du constructeur, éliminant le code verbeux redondant.
+    \item \textbf{Types d'union et de nullité} (\texttt{int|string}, \texttt{?DateTime}) : typage précis des paramètres pouvant accepter plusieurs formats maîtrisés.
+    \item \textbf{Expressions de correspondance} (\texttt{match}) : alternatives strictes, expressives et sûres aux blocs \texttt{switch/case}.
+\end{enumerate}
+
+\begin{lstlisting}[language=PHP, caption={Exemple d'entité moderne exploitant les fonctionnalités PHP 8}]
+namespace App\Model\Entity;
+
+use DateTime;
+
+class LigneVente
+{
+    public function __construct(
+        private ?int $id = null,
+        private ?int $venteId = null,
+        private int $produitId = 0,
+        private ?Produit $produit = null,
+        private int $quantite = 1,
+        private float $prixUnitaire = 0.0,
+        private float $remise = 0.0,
+        private float $sousTotal = 0.0
+    ) {}
+
+    public function calculerSousTotal(): float
+    {
+        return max(0.0, ($this->prixUnitaire * $this->quantite) - $this->remise);
+    }
+}
+\end{lstlisting}
+
+\section{Justification Architecturale : Classes Pures vs Énumérations (\texttt{enum})}
+
+Un choix d'architecture fondamental de StoreManager Pro réside dans l'utilisation de \textbf{Classes d'Entités pures} pour modéliser les tables de référence (\texttt{Role}, \texttt{ModePaiement}, \texttt{StatutDette}, \texttt{StatutAppro}, \texttt{Categorie}) au lieu des \texttt{enum} natives de PHP 8.1.
+
+\begin{metierbox}{Pourquoi des Classes Pures plutôt que des Enums ?}
+\begin{enumerate}
+    \item \textbf{Correspondance 1:1 avec le Schéma Relationnel} : Les rôles, statuts et modes de paiement sont stockés dans des tables relationnelles normalisées avec des clés primaires numériques (\texttt{id INT}), des codes textuels (\texttt{code VARCHAR}) et des libellés conviviaux (\texttt{libelle VARCHAR}).
+    \item \textbf{Extensibilité dynamique sans re-déploiement} : L'ajout d'un nouveau moyen de paiement (ex: \emph{Chèque} ou \emph{Virement}) s'effectue par une simple insertion SQL en base de données (\texttt{INSERT INTO modes\_paiement...}), sans nécessiter de modifier et recompiler le code source PHP.
+    \item \textbf{Hydratation PDO fluide} : La couche d'accès aux données (\emph{Repository}) hydrate naturellement les instances d'objets à partir des colonnes retournées par les jointures SQL standard.
+\end{enumerate}
+\end{metierbox}
+
+\section{Application Rigoureuse des Principes SOLID}
+
+Les cinq principes d'ingénierie logicielle \textbf{SOLID} ont guidé la conception de chaque classe du projet :
+
+\begin{solidbox}{S — Single Responsibility Principle (Principe de Responsabilité Unique)}
+Chaque classe possède une responsabilité unique et clairement délimitée :
+\begin{itemize}
+    \item Les \textbf{Entités} (\texttt{src/Model/Entity/}) ne gèrent que la structure des données et les calculs métiers purs en mémoire.
+    \item Les \textbf{Repositories} (\texttt{src/Model/Repository/}) sont seuls responsables de l'exécution des requêtes SQL et de la persistance.
+    \item Les \textbf{Services} (\texttt{src/Service/}) orchestrent les flux transactionnels et les règles de gestion complexes.
+    \item Les \textbf{Contrôleurs} (\texttt{src/Controller/}) traitent les requêtes HTTP, valident les entrées utilisateur et sélectionnent la vue.
+\end{itemize}
+\end{solidbox}
+
+\begin{solidbox}{O — Open/Closed Principle (Principe Ouvert/Fermé)}
+Les composants du système sont ouverts à l'extension mais fermés à la modification. Par exemple, l'architecture des repositories s'appuie sur une interface générique \texttt{RepositoryInterface}. De nouveaux types de persistance (ex: cache Redis, export NoSQL) peuvent être introduits sans altérer le code des services consommateurs.
+\end{solidbox}
+
+\begin{solidbox}{L — Liskov Substitution Principle (Principe de Substitution de Liskov)}
+La classe abstraite \texttt{AbstractRepository} implémente les méthodes génériques de manipulation de la connexion PDO. Tout repository dérivé (\texttt{ProduitRepository}, \texttt{ClientRepository}) peut être substitué à la classe de base sans altérer la cohérence du système.
+\end{solidbox}
+
+\begin{solidbox}{I — Interface Segregation Principle (Principe de Ségrégation des Interfaces)}
+Les contrats d'interfaces restent ciblés et minimalistes. Aucune classe n'est contrainte d'implémenter des méthodes superflues dont elle n'a pas l'utilité.
+\end{solidbox}
+
+\begin{solidbox}{D — Dependency Inversion Principle (Principe d'Inversion des Dépendances)}
+Les services de haut niveau (\texttt{VenteService}, \texttt{DebtService}) dépendent d'abstractions de repositories et d'instances de base de données transmises par constructeur (\emph{Dependency Injection}), facilitant le remplacement et le test unitaire isolé via des doublures.
+\end{solidbox}
+
+\section{Panorama des Design Patterns Implémentés}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Design Pattern} & \textbf{Composant Cible} & \textbf{Rôle \& Bénéfice Architectural} \\
+\midrule
+\textbf{Singleton} & \texttt{Database.php} & Instance unique de connexion SGBD partagée, éliminant les connexions concurrentes inutiles. \\
+\textbf{Layered MVC} & Architecture Globale & Séparation étanche en couches : Présentation, Application/Service, Domaine et Persistance. \\
+\textbf{Repository} & \texttt{src/Model/Repository/} & Encapsulation totale du dialecte SQL et des requêtes préparées hors du code métier. \\
+\textbf{Front Controller} & \texttt{public/index.php} & Point d'entrée unique interceptant toutes les requêtes HTTP pour les router de manière centralisée. \\
+\textbf{Dependency Injection} & Constructeurs Services & Passage explicite des dépendances pour un couplage faible et une testabilité maximale. \\
+\bottomrule
+\end{tabularx}
+\caption{Design Patterns mis en œuvre dans StoreManager Pro}
+\label{tab:design_patterns}
+\end{table}
+
+% ==============================================================================
+% CHAPITRE 3 : ARCHITECTURE SYSTÈME & RÉSILIENCE BDD
+% ==============================================================================
+\chapter{Architecture Système, Infrastructure \& Résilience BDD}
+
+\section{Le Dispositif de Haute Disponibilité : Fallback PostgreSQL vers SQLite}
+
+L'un des atouts techniques majeurs de StoreManager Pro réside dans son connecteur de données résilient implémenté dans \texttt{src/Core/Database.php}. Ce composant garantit le fonctionnement ininterrompu de la caisse commerciale même en cas de panne réseau majeure ou d'indisponibilité du serveur de base de données principal :
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=1.5cm,
+    stepnode/.style={rectangle, draw=primaryNavy, fill=white, rounded corners=4pt, text width=6.5cm, minimum height=1cm, align=left, font=\small},
+    decision/.style={diamond, draw=accentGold, fill=accentGold!20, aspect=2, text width=3cm, align=center, font=\small\bfseries},
+    successnode/.style={rectangle, draw=successGreen, fill=successGreen!15, rounded corners=4pt, text width=4.5cm, minimum height=1cm, align=center, font=\small\bfseries},
+    arrow/.style={->, >=stealth, thick, primaryNavy}
+]
+    \node[stepnode] (init) {\textbf{1.} Appel à \texttt{Database::getInstance()}};
+    \node[decision, below=0.8cm of init] (trypg) {PostgreSQL\\Disponible ?};
+    \node[successnode, right=1.5cm of trypg] (pgok) {Connexion Active\\Driver : \texttt{pgsql}};
+    
+    \node[stepnode, below=0.8cm of trypg] (catchpg) {\textbf{2.} Capture de \texttt{PDOException}\\Enclenchement du Fallback Local};
+    \node[decision, below=0.8cm of catchpg] (dbsqlite) {Fichier \texttt{erp.db}\\Existant \& Non-Vide ?};
+    
+    \node[successnode, right=1.5cm of dbsqlite] (sqliteok) {Connexion Active\\Driver : \texttt{sqlite}};
+    \node[stepnode, below=0.8cm of dbsqlite] (selfheal) {\textbf{3. Self-Healing (Auto-initialisation)}\\Exécution de \texttt{schema\_sqlite.sql}\\Création des 15 tables \& Seeding};
+    \node[successnode, below=0.8cm of selfheal] (sqlitehealed) {Connexion Active \& Seedée\\Driver : \texttt{sqlite}};
+    
+    \draw[arrow] (init) -- (trypg);
+    \draw[arrow] (trypg) -- node[above]{\textbf{Oui}} (pgok);
+    \draw[arrow] (trypg) -- node[right]{\textbf{Non (Échec)}} (catchpg);
+    \draw[arrow] (catchpg) -- (dbsqlite);
+    \draw[arrow] (dbsqlite) -- node[above]{\textbf{Oui}} (sqliteok);
+    \draw[arrow] (dbsqlite) -- node[right]{\textbf{Non (Vierge)}} (selfheal);
+    \draw[arrow] (selfheal) -- (sqlitehealed);
+\end{tikzpicture}
+\caption{Algorithme de Résilience et Auto-Guérison (Self-Healing) de la Base de Données}
+\label{fig:db_fallback}
+\end{figure}
+
+\subsection{Fonctionnalité d'Auto-Guérison (\emph{Self-Healing})}
+Lorsque l'application s'exécute pour la première fois sur un environnement vierge où PostgreSQL n'est pas configuré :
+\begin{enumerate}
+    \item La méthode \texttt{initConnection()} intercepte l'erreur de connexion PostgreSQL.
+    \item Elle vérifie la présence du fichier \texttt{database/erp.db}. Si le dossier parent n'existe pas, elle le crée via \texttt{mkdir(\$dir, 0755, true)}.
+    \item Si le fichier pèse 0 octet ou n'existe pas, elle charge automatiquement le script DDL \texttt{database/schema\_sqlite.sql} et exécute l'intégralité des instructions de création de structure et de chargement des données initiales de démonstration (utilisateurs par défaut, catalogue de produits, clients et comptes d'essai).
+    \item L'application devient instantanément opérationnelle sans nécessiter d'intervention manuelle d'administration système.
+\end{enumerate}
+
+\section{Modélisation Relationnelle Normalisée en 3FN}
+
+Le schéma relationnel est structuré autour de \textbf{15 tables normalisées en Troisième Forme Normale (3FN)}, garantissant l'absence totale de redondance et l'intégrité absolue des transactions :
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+\textbf{Table SQL} & \textbf{Rôle \& Contenu Métier} & \textbf{Relations Principales} \\
+\midrule
+\texttt{roles} & Référentiel des profils utilisateurs (\texttt{ADMIN}, \texttt{VENTE}, etc.) & $1 \to N$ vers \texttt{utilisateurs} \\
+\texttt{modes\_paiement} & Canaux de règlement (\emph{Espèces}, \emph{Wave}, \emph{Dette}, etc.) & $1 \to N$ vers \texttt{ventes}, \texttt{paiements} \\
+\texttt{statuts\_dette} & États des créances (\texttt{EN\_COURS}, \texttt{SOLDEE}, \texttt{EN\_RETARD}) & $1 \to N$ vers \texttt{dettes} \\
+\texttt{statuts\_appro} & États des bons de livraison (\texttt{EN\_ATTENTE}, \texttt{RECU}, etc.) & $1 \to N$ vers \texttt{approvisionnements} \\
+\texttt{categories} & Familles de produits du catalogue & $1 \to N$ vers \texttt{produits} \\
+\texttt{utilisateurs} & Comptes d'accès avec mot de passe haché bcrypt & $1 \to N$ vers transactions \\
+\texttt{clients} & Répertoire des clients avec \texttt{limite\_credit} et encours & $1 \to N$ vers \texttt{ventes}, \texttt{dettes} \\
+\texttt{fournisseurs} & Répertoire des tiers fournisseurs & $1 \to N$ vers \texttt{approvisionnements} \\
+\texttt{produits} & Catalogue articles, prix d'achat/vente, stock et alertes & Lié aux lignes de vente \& appro \\
+\texttt{ventes} & En-tête des transactions de caisse \& factures & $1 \to N$ vers \texttt{lignes\_vente} \\
+\texttt{lignes\_vente} & Articles individuels vendus avec prix et remises & Lié à \texttt{ventes} et \texttt{produits} \\
+\texttt{dettes} & Créances clients générées par les ventes à crédit & $1 \to N$ vers \texttt{paiements} \\
+\texttt{paiements} & Règlements partiels ou totaux des dettes & Lié à \texttt{dettes} \\
+\texttt{approvisionnements} & Bons de livraison fournisseurs & $1 \to N$ vers \texttt{lignes\_appro...} \\
+\texttt{lignes\_appro...} & Articles réceptionnés et quantités physiques & Lié à \texttt{appro...} et \texttt{produits} \\
+\bottomrule
+\end{tabularx}
+\caption{Répertoire des 15 Tables du Schéma Relationnel StoreManager Pro}
+\label{tab:sql_schema}
+\end{table}
+
+\section{Stratégies d'Intégrité Référentielle \& Règles \texttt{ON DELETE}}
+
+La politique de maintien de l'intégrité des données applique des règles strictes sur les clés étrangères :
+\begin{itemize}
+    \item \textbf{\texttt{ON DELETE CASCADE}} (Compositions fortes) : la suppression d'une vente entraîne la suppression automatique de ses lignes de vente dépendantes ; la suppression d'une dette entraîne la purge de ses paiements associés.
+    \item \textbf{\texttt{ON DELETE RESTRICT}} (Protection des données maîtresses) : interdiction formelle de supprimer un produit s'il est déjà référencé dans l'historique des ventes ou des réceptions ; interdiction de supprimer un client s'il possède un encours ou un historique de facturation.
+    \item \textbf{\texttt{ON DELETE SET NULL}} (Associations optionnelles) : si une catégorie de produit est supprimée, la colonne \texttt{categorie\_id} des produits associés est positionnée à \texttt{NULL} sans détruire l'article.
+\end{itemize}
+
+\begin{alertbox}{Activation Impérative des Clés Étrangères sous SQLite}
+Par défaut, le moteur SQLite désactive la vérification des contraintes de clés étrangères pour des raisons de compatibilité historique. Le connecteur \texttt{Database.php} exécute impérativement l'instruction suivante dès l'ouverture de connexion :
+\begin{lstlisting}[language=SQL]
+PRAGMA foreign_keys = ON;
+\end{lstlisting}
+Sans cette ligne, les contraintes \texttt{ON DELETE RESTRICT} et les liaisons relationnelles seraient totalement ignorées par SQLite.
+\end{alertbox}
+
+\section{Contraintes Métier Déclaratives (\texttt{CHECK})}
+
+Afin d'empêcher toute corruption de données même en cas de bogue logiciel, des contraintes d'intégrité déclaratives \texttt{CHECK} sont appliquées directement au niveau de la base de données :
+\begin{lstlisting}[style=sqlstyle, caption={Extrait des contraintes d'intégrité CHECK dans schema.sql}]
+CREATE TABLE produits (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    libelle VARCHAR(150) NOT NULL,
+    prix_achat NUMERIC(12, 2) NOT NULL CHECK (prix_achat >= 0),
+    prix_vente NUMERIC(12, 2) NOT NULL CHECK (prix_vente >= 0),
+    qte_stock INT NOT NULL DEFAULT 0 CHECK (qte_stock >= 0),
+    seuil_alerte INT NOT NULL DEFAULT 5 CHECK (seuil_alerte >= 0),
+    CONSTRAINT chk_produit_non_vente_a_perte CHECK (prix_vente >= prix_achat)
+);
+
+CREATE TABLE clients (
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    telephone VARCHAR(30) UNIQUE NOT NULL,
+    limite_credit NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (limite_credit >= 0),
+    total_dettes_actuelles NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (total_dettes_actuelles >= 0)
+);
+\end{lstlisting}
+
+\section{Sécurité \& Immunité contre les Vulnérabilités Web}
+
+\subsection{1. Protection Absolue contre les Injections SQL}
+Toutes les opérations de sélection, d'insertion et de mise à jour utilisent des requêtes préparées PDO strictes associées à l'option :
+\begin{lstlisting}[language=PHP]
+PDO::ATTR_EMULATE_PREPARES => false
+\end{lstlisting}
+Cette configuration désactive l'émulation logicielle PHP et contraint le pilote PDO à transmettre la structure SQL et les variables séparément au moteur de base de données. Il est mathématiquement et informatiquement impossible pour une chaîne malveillante de détourner la syntaxe d'une requête préparée.
+
+\subsection{2. Protection contre les Failles XSS (\emph{Cross-Site Scripting})}
+Toutes les variables dynamiques affichées dans les vues HTML sont systématiquement assainies via \texttt{htmlspecialchars(\$val, ENT\_QUOTES, 'UTF-8')}, neutralisant l'injection de balises JavaScript.
+
+\subsection{3. Sécurisation des Sessions Utilisateur}
+Le composant \texttt{SessionManager} configure des paramètres de cookies stricts :
+\begin{itemize}
+    \item \texttt{httponly = true} : interdiction d'accès aux cookies de session via JavaScript (bloque le vol de session par XSS).
+    \item \texttt{samesite = 'Lax'} : protection native contre les attaques CSRF (\emph{Cross-Site Request Forgery}).
+    \item \texttt{session\_regenerate\_id(true)} : régénération de l'identifiant de session lors de la connexion pour empêcher la fixation de session.
+\end{itemize}
+
+% ==============================================================================
+% CHAPITRE 4 : MODÈLE DU DOMAINE (LES 15 ENTITÉS POO)
+% ==============================================================================
+\chapter{Modèle du Domaine (Dissection des 15 Entités POO)}
+
+\section{Vue d'Ensemble du Modèle Orienté Objet}
+
+Le modèle du domaine de StoreManager Pro comprend \textbf{15 classes d'entités} situées dans l'espace de noms \texttt{App\textbackslash Model\textbackslash Entity}. Chaque classe encapsule fidèlement les données et la logique métier de son concept :
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    entity/.style={rectangle, draw=primaryNavy, fill=white, rounded corners=4pt, text width=3.8cm, minimum height=1.4cm, align=left, font=\scriptsize},
+    titlebox/.style={font=\bfseries\color{primaryNavy}},
+    link/.style={-, thick, primaryBlue}
+]
+    \node[entity] (client) at (-4.5, 3) {\textbf{Client}\\- id: int\\- nom: string\\- limiteCredit: float\\- totalDettes: float};
+    \node[entity] (user) at (4.5, 3) {\textbf{User}\\- id: int\\- nom: string\\- email: string\\- roleId: int};
+    \node[entity] (role) at (4.5, 5) {\textbf{Role}\\- id: int\\- code: string\\- libelle: string};
+    
+    \node[entity] (vente) at (-1.5, 0.5) {\textbf{Vente}\\- id: int\\- numFacture: string\\- montantTotal: float\\- montantPaye: float};
+    \node[entity] (ligneVente) at (-1.5, -2.5) {\textbf{LigneVente}\\- id: int\\- quantite: int\\- prixUnitaire: float\\- remise: float};
+    \node[entity] (produit) at (3, -2.5) {\textbf{Produit}\\- id: int\\- code: string\\- prixVente: float\\- qteStock: int};
+    
+    \node[entity] (dette) at (-5.5, 0.5) {\textbf{Dette}\\- id: int\\- montantTotal: float\\- montantRestant: float};
+    \node[entity] (paiement) at (-5.5, -2.5) {\textbf{Paiement}\\- id: int\\- montant: float\\- datePaiement: DateTime};
+    
+    \draw[link] (user) -- node[right, font=\tiny]{1..1} (role);
+    \draw[link] (client) -- node[above, font=\tiny]{1..*} (vente);
+    \draw[link] (vente) -- node[right, font=\tiny]{1..* (Composition)} (ligneVente);
+    \draw[link] (ligneVente) -- node[above, font=\tiny]{*..1} (produit);
+    \draw[link] (vente) -- node[above, font=\tiny]{0..1} (dette);
+    \draw[link] (dette) -- node[left, font=\tiny]{1..* (Composition)} (paiement);
+    \draw[link] (client) -- node[left, font=\tiny]{1..*} (dette);
+\end{tikzpicture}
+\caption{Diagramme Structurel Partiel des Entités Clés du Domaine}
+\label{fig:uml_entities}
+\end{figure}
+
+\section{Étude Détaillée des Entités Clés}
+
+\subsection{1. L'Entité \texttt{Produit} : Tenue de Stock \& Marges Commerciales}
+L'entité \texttt{Produit} encapsule l'état physique et financier d'un article :
+\begin{lstlisting}[language=PHP, caption={Extrait de la classe Produit (src/Model/Entity/Produit.php)}]
+namespace App\Model\Entity;
+
+class Produit
+{
+    public function __construct(
+        private ?int $id = null,
+        private string $code = '',
+        private string $libelle = '',
+        private ?string $description = null,
+        private float $prixAchat = 0.0,
+        private float $prixVente = 0.0,
+        private int $qteStock = 0,
+        private int $seuilAlerte = 5,
+        private ?int $categorieId = null,
+        private ?Categorie $categorie = null
+    ) {}
+
+    public function calculerMarge(): float
+    {
+        return max(0.0, $this->prixVente - $this->prixAchat);
+    }
+
+    public function calculerTauxMarge(): float
+    {
+        return $this->prixAchat > 0 
+            ? round(($this->calculerMarge() / $this->prixAchat) * 100, 2) 
+            : 0.0;
+    }
+
+    public function estEnAlerte(): bool
+    {
+        return $this->qteStock <= $this->seuilAlerte;
+    }
+
+    public function ajouterStock(int $quantite): void
+    {
+        if ($quantite > 0) {
+            $this->qteStock += $quantite;
+        }
+    }
+
+    public function retirerStock(int $quantite): bool
+    {
+        if ($quantite > 0 && $this->qteStock >= $quantite) {
+            $this->qteStock -= $quantite;
+            return true;
+        }
+        return false;
+    }
+}
+\end{lstlisting}
+
+\subsection{2. L'Entité \texttt{Client} : Évaluation du Risque de Crédit}
+L'entité \texttt{Client} intègre directement les fonctions d'arbitrage financier :
+\begin{lstlisting}[language=PHP, caption={Extrait de la classe Client (src/Model/Entity/Client.php)}]
+namespace App\Model\Entity;
+
+class Client
+{
+    public function __construct(
+        private ?int $id = null,
+        private string $nom = '',
+        private string $prenom = '',
+        private string $telephone = '',
+        private ?string $email = null,
+        private ?string $adresse = null,
+        private float $limiteCredit = 0.0,
+        private float $totalDettesActuelles = 0.0
+    ) {}
+
+    public function getCreditDisponible(): float
+    {
+        return max(0.0, $this->limiteCredit - $this->totalDettesActuelles);
+    }
+
+    public function peutPrendreCredit(float $montantNouveauCredit): bool
+    {
+        if ($montantNouveauCredit <= 0) {
+            return true;
+        }
+        return ($this->totalDettesActuelles + $montantNouveauCredit) <= $this->limiteCredit;
+    }
+
+    public function ajouterDette(float $montant): void
+    {
+        if ($montant > 0) {
+            $this->totalDettesActuelles += $montant;
+        }
+    }
+
+    public function diminuerDette(float $montant): void
+    {
+        $this->totalDettesActuelles = max(0.0, $this->totalDettesActuelles - $montant);
+    }
+}
+\end{lstlisting}
+
+\subsection{3. Les Entités \texttt{Dette} \& \texttt{Paiement} : Cycle de Vie de la Créance}
+Une créance évolue selon trois statuts formalisés dans \texttt{StatutDette} :
+\begin{enumerate}
+    \item \texttt{EN\_COURS} (ID 1) : Dette active dont le reste dû est strictement positif.
+    \item \texttt{SOLDEE} (ID 2) : Dette dont l'intégralité du montant a été remboursée (\texttt{montantRestant = 0}).
+    \item \texttt{EN\_RETARD} (ID 3) : Dette non soldée dont la date d'échéance contractuelle est dépassée par rapport à la date du jour.
+\end{enumerate}
+
+% ==============================================================================
+% CHAPITRE 5 : COUCHE D'ACCÈS AUX DONNÉES (REPOSITORIES)
+% ==============================================================================
+\chapter{Couche d'Accès aux Données (Repositories \& PDO Strict)}
+
+\section{Le Pattern Repository \& Contrat d'Interface}
+
+Le pattern Repository isole totalement la logique de persistance SQL du reste de l'application. Tous les repositories de StoreManager Pro implémentent l'interface standard \texttt{RepositoryInterface} et héritent de la classe de base \texttt{AbstractRepository} :
+
+\begin{lstlisting}[language=PHP, caption={Interface Repository (src/Model/Repository/RepositoryInterface.php)}]
+namespace App\Model\Repository;
+
+interface RepositoryInterface
+{
+    public function findById(int $id): ?object;
+    public function findAll(): array;
+    public function count(): int;
+}
+\end{lstlisting}
+
+\section{Dissection de \texttt{ProduitRepository.php}}
+
+Le repository des produits combine des opérations de recherche par code-barres et des méthodes atomiques d'ajustement de stock physique :
+
+\begin{lstlisting}[language=PHP, caption={Extrait de ProduitRepository.php}]
+namespace App\Model\Repository;
+
+use App\Model\Entity\Produit;
+use PDO;
+
+class ProduitRepository extends AbstractRepository
+{
+    public function findByCode(string $code): ?Produit
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM produits WHERE UPPER(code) = :code LIMIT 1");
+        $stmt->bindValue(':code', strtoupper(trim($code)), PDO::PARAM_STR);
+        $stmt->execute();
+        $row = $stmt->fetch();
+
+        return $row ? $this->hydrate($row) : null;
+    }
+
+    public function decrementStock(int $produitId, int $quantite): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE produits 
+             SET qte_stock = qte_stock - :qte 
+             WHERE id = :id AND qte_stock >= :qte"
+        );
+        $stmt->bindValue(':qte', $quantite, PDO::PARAM_INT);
+        $stmt->bindValue(':id', $produitId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->rowCount() > 0;
+    }
+
+    public function incrementStock(int $produitId, int $quantite): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE produits SET qte_stock = qte_stock + :qte WHERE id = :id"
+        );
+        $stmt->bindValue(':qte', $quantite, PDO::PARAM_INT);
+        $stmt->bindValue(':id', $produitId, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+}
+\end{lstlisting}
+
+\begin{oralbox}{Pourquoi la condition WHERE qte\_stock >= :qte est-elle vitale ?}
+Dans un environnement commercial multi-caisses, deux vendeurs peuvent scanner le dernier article en stock au même millième de seconde. Une requête classique \texttt{UPDATE produits SET qte\_stock = qte\_stock - 1} rendrait le stock négatif ($-1$). En ajoutant la condition \texttt{AND qte\_stock >= :qte} et en vérifiant que \texttt{rowCount() === 1}, le système garantit au niveau du moteur SGBD qu'un seul des deux vendeurs obtiendra l'article, tandis que l'autre déclenchera immédiatement une exception de rupture de stock sans corrompre la base.
+\end{oralbox}
+
+% ==============================================================================
+% CHAPITRE 6 : COUCHE MÉTIER & ORCHESTRATION TRANSACTIONNELLE
+% ==============================================================================
+\chapter{Couche Métier \& Orchestration Transactionnelle (Services)}
+
+\section{Autopsie Détaillée Ligne par Ligne des 3 Méthodes Clés}
+
+Cette section constitue le support d'analyse technique approfondi pour les épreuves d'évaluation orale.
+
+\subsection{🔍 Méthode 1 : \texttt{Database::getInstance()} (Singleton \& Résilience SGBD)}
+
+\begin{lstlisting}[language=PHP, caption={Implémentation complète de Database::getInstance() et initConnection()}]
+// Fichier : src/Core/Database.php
+
+class Database
+{
+    private static ?Database $instance = null;
+    private ?PDO $connection = null;
+    private string $driver = 'unknown';
+
+    private function __construct()
+    {
+        $this->initConnection();
+    }
+
+    private function __clone() {}
+
+    public function __wakeup()
+    {
+        throw new Exception("Impossible de désérialiser une instance Singleton.");
+    }
+
+    public static function getInstance(): Database
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    private function initConnection(): void
+    {
+        $pdoOptions = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+
+        try {
+            $pgHost = getenv('DB_HOST') ?: '127.0.0.1';
+            $pgPort = getenv('DB_PORT') ?: '5433';
+            $pgDb   = getenv('DB_NAME') ?: 'storemanager_db';
+            $pgUser = getenv('DB_USER') ?: 'ichigo';
+            $pgPass = getenv('DB_PASS') ?: 'password';
+
+            $dsnPgsql = "pgsql:host={$pgHost};port={$pgPort};dbname={$pgDb};";
+            $this->connection = new PDO($dsnPgsql, $pgUser, $pgPass, $pdoOptions);
+            $this->driver = 'pgsql';
+            return;
+        } catch (PDOException $pgException) {
+            $pgError = $pgException->getMessage();
+        }
+
+        try {
+            $baseDir = dirname(__DIR__, 2);
+            $sqliteFile = $baseDir . '/database/erp.db';
+            $isNew = !file_exists($sqliteFile) || filesize($sqliteFile) === 0;
+
+            $this->connection = new PDO("sqlite:" . $sqliteFile, null, null, $pdoOptions);
+            $this->driver = 'sqlite';
+            $this->connection->exec("PRAGMA foreign_keys = ON;");
+
+            if ($isNew) {
+                $schemaSql = file_get_contents($baseDir . '/database/schema_sqlite.sql');
+                $this->connection->exec($schemaSql);
+            }
+        } catch (PDOException $sqliteException) {
+            throw new Exception("Échec total BDD (PG: {$pgError} | SQLite: {$sqliteException->getMessage()})");
+        }
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Analyse Ligne par Ligne pour la Soutenance :}
+\begin{itemize}
+    \item \textbf{Lignes 5-7} : Propriétés privées encapsulées. \texttt{\$instance} stocke l'unique objet en mémoire vive pour toute la durée de la requête HTTP.
+    \item \textbf{Lignes 9-12} : Constructeur privé (\texttt{private}). Interdit formellement l'utilisation de l'opérateur externe \texttt{new Database()}, forçant le passage par \texttt{getInstance()}.
+    \item \textbf{Lignes 14-19} : Neutralisation de \texttt{\_\_clone()} et \texttt{\_\_wakeup()} : empêche la duplication par clonage mémoire ou par désérialisation binaire (\texttt{unserialize()}).
+    \item \textbf{Lignes 21-27} : \texttt{getInstance()} applique le principe du \emph{Lazy Loading} (chargement différé) : l'instanciation ne s'effectue qu'au tout premier appel.
+    \item \textbf{Lignes 30-34} : Configuration des options PDO de sécurité maximale (levée systématique d'exceptions et désactivation de l'émulation des requêtes préparées).
+    \item \textbf{Lignes 36-47} : Bloc prioritaire PostgreSQL. Tente d'ouvrir la connexion de production. Si elle réussit, la méthode se termine immédiatement par \texttt{return;}.
+    \item \textbf{Lignes 48-64} : Bloc de fallback SQLite. Si PostgreSQL échoue, l'exception est interceptée sans crasher l'application. Le système ouvre \texttt{database/erp.db}, active les contraintes \texttt{PRAGMA foreign\_keys = ON;} et exécute l'auto-seeding si la base est vierge.
+\end{itemize}
+
+\subsection{🔍 Méthode 2 : \texttt{VenteService::validerVente()} (Cœur Transactionnel de Caisse)}
+
+\begin{lstlisting}[language=PHP, caption={Orchestration de la validation de vente (src/Service/VenteService.php)}]
+public function validerVente(
+    int $userId,
+    ?int $clientId = null,
+    int $modePaiementId = 1,
+    float $montantPaye = 0.0,
+    array $articles = [],
+    ?DateTime $dateEcheance = null
+): Vente {
+    if (empty($articles)) {
+        throw new InvalidArgumentException("Panier de vente vide.");
+    }
+
+    $lignesPreparees = [];
+    $montantTotalCalcule = 0.0;
+
+    foreach ($articles as $item) {
+        $produitId = (int)$item['produit_id'];
+        $quantite = (int)$item['quantite'];
+        $remise = max(0.0, (float)($item['remise'] ?? 0.0));
+
+        $produit = $this->produitRepository->findById($produitId);
+        if (!$produit || $produit->getQteStock() < $quantite) {
+            throw new RuntimeException("Stock insuffisant pour " . $produit?->getLibelle());
+        }
+
+        $sousTotal = max(0.0, ($produit->getPrixVente() * $quantite) - $remise);
+        $montantTotalCalcule += $sousTotal;
+
+        $lignesPreparees[] = [
+            'produit' => $produit,
+            'quantite' => $quantite,
+            'prix_unitaire' => $produit->getPrixVente(),
+            'remise' => $remise,
+            'sous_total' => $sousTotal
+        ];
+    }
+
+    $montantRestant = max(0.0, $montantTotalCalcule - $montantPaye);
+    $estACredit = ($montantRestant > 0 || $modePaiementId === 5);
+
+    if ($estACredit) {
+        if (!$clientId) {
+            throw new InvalidArgumentException("Client obligatoire pour vente a credit.");
+        }
+        $client = $this->clientRepository->findById($clientId);
+        if (!$client || !$client->peutPrendreCredit($montantRestant)) {
+            throw new RuntimeException("Plafond de credit client depasse.");
+        }
+    }
+
+    $pdo = Database::getPDO();
+    $pdo->beginTransaction();
+
+    try {
+        $numeroFacture = $this->genererNumeroFacture();
+        $dateStr = (new DateTime())->format('Y-m-d H:i:s');
+
+        $stmtVente = $pdo->prepare(
+            "INSERT INTO ventes (numero_facture, date_vente, montant_total, montant_paye, montant_restant, mode_paiement_id, statut, client_id, user_id)
+             VALUES (:num, :date_v, :total, :paye, :restant, :mode_id, 'VALIDEE', :client_id, :user_id)"
+        );
+        $stmtVente->execute([
+            ':num' => $numeroFacture, ':date_v' => $dateStr, ':total' => $montantTotalCalcule,
+            ':paye' => $montantPaye, ':restant' => $montantRestant, ':mode_id' => $modePaiementId,
+            ':client_id' => $clientId, ':user_id' => $userId
+        ]);
+        $venteId = (int)$pdo->lastInsertId();
+
+        $stmtLigne = $pdo->prepare(
+            "INSERT INTO lignes_vente (vente_id, produit_id, quantite, prix_unitaire, remise, sous_total)
+             VALUES (:v_id, :p_id, :qte, :pu, :remise, :st)"
+        );
+        $stmtDecStock = $pdo->prepare(
+            "UPDATE produits SET qte_stock = qte_stock - :qte WHERE id = :id AND qte_stock >= :qte"
+        );
+
+        foreach ($lignesPreparees as $ligne) {
+            $stmtLigne->execute([
+                ':v_id' => $venteId, ':p_id' => $ligne['produit']->getId(),
+                ':qte' => $ligne['quantite'], ':pu' => $ligne['prix_unitaire'],
+                ':remise' => $ligne['remise'], ':st' => $ligne['sous_total']
+            ]);
+
+            $stmtDecStock->execute([':qte' => $ligne['quantite'], ':id' => $ligne['produit']->getId()]);
+            if ($stmtDecStock->rowCount() === 0) {
+                throw new RuntimeException("Conflit de stock concurrent survenu.");
+            }
+        }
+
+        if ($estACredit && $montantRestant > 0) {
+            $echeance = $dateEcheance ?? (new DateTime())->modify('+30 days');
+            $stmtDette = $pdo->prepare(
+                "INSERT INTO dettes (vente_id, client_id, montant_total, montant_restant, date_creation, date_echeance, statut_id)
+                 VALUES (:v_id, :c_id, :tot, :res, :dc, :de, 1)"
+            );
+            $stmtDette->execute([
+                ':v_id' => $venteId, ':c_id' => $clientId, ':tot' => $montantRestant,
+                ':res' => $montantRestant, ':dc' => $dateStr, ':de' => $echeance->format('Y-m-d H:i:s')
+            ]);
+            $detteId = (int)$pdo->lastInsertId();
+
+            $pdo->prepare("UPDATE clients SET total_dettes_actuelles = total_dettes_actuelles + :m WHERE id = :id")
+                ->execute([':m' => $montantRestant, ':id' => $clientId]);
+
+            if ($montantPaye > 0) {
+                $pdo->prepare(
+                    "INSERT INTO paiements (dette_id, montant, date_paiement, mode_paiement_id, reference_paiement, user_id)
+                     VALUES (:d_id, :m, :dp, :mp_id, :ref, :u_id)"
+                )->execute([
+                    ':d_id' => $detteId, ':m' => $montantPaye, ':dp' => $dateStr,
+                    ':mp_id' => $modePaiementId, ':ref' => 'ACOMPTE-' . $numeroFacture, ':u_id' => $userId
+                ]);
+            }
+        }
+
+        $pdo->commit();
+        return $this->getVente($venteId);
+
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+\end{lstlisting}
+
+\subsection{🔍 Méthode 3 : \texttt{DebtService::enregistrerRemboursement()} (Recouvrement)}
+
+\begin{lstlisting}[language=PHP, caption={Enregistrement d'un versement dette (src/Service/DebtService.php)}]
+public function enregistrerRemboursement(
+    int $detteId,
+    float $montant,
+    int $modePaiementId,
+    int $userId = 1,
+    ?string $reference = null
+): array {
+    if ($montant <= 0) {
+        throw new InvalidArgumentException("Le versement doit etre superieur a zero.");
+    }
+
+    $dette = $this->detteRepository->findById($detteId);
+    if (!$dette || $dette->estSoldee()) {
+        throw new RuntimeException("Dette inexistante ou deja soldee.");
+    }
+
+    if ($montant > $dette->getMontantRestant()) {
+        throw new InvalidArgumentException("Le versement excede le reste du.");
+    }
+
+    $this->pdo->beginTransaction();
+
+    try {
+        $paiement = new Paiement(
+            detteId: $detteId,
+            montant: $montant,
+            datePaiement: new DateTime(),
+            modePaiementId: $modePaiementId,
+            referencePaiement: $reference,
+            userId: $userId
+        );
+        $this->detteRepository->savePaiement($paiement);
+
+        $nouveauReste = max(0.0, round($dette->getMontantRestant() - $montant, 2));
+        $statutId = ($nouveauReste <= 0.0) ? 2 : ($dette->estEnRetard() ? 3 : 1);
+
+        $this->detteRepository->updateMontantRestantEtStatut($detteId, $nouveauReste, $statutId);
+        $this->clientRepository->diminuerDette($dette->getClientId(), $montant);
+
+        $this->pdo->commit();
+
+        return [
+            'success' => true,
+            'dette_id' => $detteId,
+            'nouveau_reste' => $nouveauReste,
+            'est_soldee' => ($nouveauReste <= 0.0)
+        ];
+    } catch (Throwable $e) {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+\end{lstlisting}
+
+% ==============================================================================
+% CHAPITRE 7 : COUCHE PRÉSENTATION, CONTRÔLEURS & POS
+% ==============================================================================
+\chapter{Couche Présentation, Contrôleurs Web \& Caisse Tactile POS}
+
+\section{Le Cycle de Vie d'une Requête HTTP (Front Controller \& Routage)}
+
+L'ensemble du trafic HTTP converge vers le point d'entrée unique \texttt{public/index.php} :
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    stepnode/.style={rectangle, draw=primaryNavy, fill=lightBg, rounded corners=4pt, text width=6cm, minimum height=0.9cm, align=center, font=\small},
+    arrow/.style={->, >=stealth, thick, primaryBlue}
+]
+    \node[stepnode] (http) {\textbf{1. Requête Navigateur}\\GET/POST \texttt{/pos/ajouter}};
+    \node[stepnode, below=0.6cm of http] (fc) {\textbf{2. Front Controller (\texttt{public/index.php})}\\Autoloading PSR-4 \& Démarrage Session};
+    \node[stepnode, below=0.6cm of fc] (router) {\textbf{3. Routeur Regex (\texttt{Router.php})}\\Résolution de route \& Dispatch};
+    \node[stepnode, below=0.6cm of router] (ctrl) {\textbf{4. Contrôleur (\texttt{POSController.php})}\\Validation des paramètres \& Appel Service};
+    \node[stepnode, below=0.6cm of ctrl] (service) {\textbf{5. Couche Métier (\texttt{VenteService.php})}\\Règles, Stocks \& Transactions PDO};
+    \node[stepnode, below=0.6cm of service] (resp) {\textbf{6. Réponse Client}\\Redirection PRG ou Flux JSON (AJAX)};
+    
+    \draw[arrow] (http) -- (fc);
+    \draw[arrow] (fc) -- (router);
+    \draw[arrow] (router) -- (ctrl);
+    \draw[arrow] (ctrl) -- (service);
+    \draw[arrow] (service) -- (resp);
+\end{tikzpicture}
+\caption{Cycle de traitement d'une action utilisateur dans StoreManager Pro}
+\label{fig:http_flow}
+\end{figure}
+
+\section{Gestion de Panier en Session \& Double Mode de Réponse}
+
+Le contrôleur de caisse \texttt{POSController} maintient l'état du panier en cours dans \texttt{\$\_SESSION['pos\_cart']}. Il implémente un double mécanisme de réponse :
+\begin{enumerate}
+    \item \textbf{Mode Asynchrone (AJAX / Fetch API)} : si l'en-tête \texttt{X-Requested-With: XMLHttpRequest} est détecté, le contrôleur retourne une charge utile JSON contenant le panier actualisé et les totaux financiers recalculés.
+    \item \textbf{Mode Classique (Pattern Post-Redirect-Get - PRG)} : pour les soumissions de formulaire HTML standard, le contrôleur effectue une redirection HTTP \texttt{302} vers \texttt{/pos} avec stockage d'un message Flash de confirmation. Ce pattern prévient formellement le ré-envoi accidentel de formulaire lors d'un rafraîchissement (\texttt{F5}).
+\end{enumerate}
+
+% ==============================================================================
+% CHAPITRE 8 : STRATÉGIE DE TEST, VALIDATION & QUALITÉ
+% ==============================================================================
+\chapter{Stratégie de Test, Validation \& Qualité Logicielle}
+
+\section{Architecture de la Suite de Tests Automatisés}
+
+L'intégrité de la logique applicative est garantie par une suite de \textbf{8 scripts de tests automatisés} totalisant \textbf{294 assertions strictes} avec 100\% de succès :
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{llcX}
+\toprule
+\textbf{Fichier de Test} & \textbf{Cible Applicative} & \textbf{Assertions} & \textbf{Périmètre \& Cas Limites Testés} \\
+\midrule
+\texttt{test\_entities.php} & Entités POO Pures & 38 & Encapsulation, calculs marges, plafonds crédit, cycle dettes. \\
+\texttt{test\_repositories.php} & Repositories SQL & 45 & CRUD, requêtes préparées, décrémentation conditionnelle. \\
+\texttt{test\_vente\_service.php} & \texttt{VenteService} & 57 & Validation ventes, calculs totaux, rollback sur erreur stock. \\
+\texttt{test\_pos\_controller.php} & \texttt{POSController} & 24 & Actions panier session, flux caisse, réponses AJAX. \\
+\texttt{test\_views.php} & Vues HTML & 6 & Rendu sans notices PHP ni variables indéfinies. \\
+\texttt{test\_debt\_service.php} & \texttt{DebtService} & 42 & Règlements partiels/totaux, encours, bascule \texttt{SOLDEE}. \\
+\texttt{test\_supply\_service.php} & \texttt{SupplyService} & 34 & Création BL, réceptions réelles, incrémentation stocks. \\
+\texttt{test\_auth.php} & \texttt{AuthManager} & 48 & Bcrypt, profils rapides, filtrage des routes RBAC. \\
+\midrule
+\textbf{TOTAL VALIDÉ} & \textbf{Couverture Globale} & \textbf{294 / 294} & \textbf{Taux de Succès : 100\% (0 Échec, 0 Warning)} \\
+\bottomrule
+\end{tabularx}
+\caption{Synthèse de la Couverture de Tests de StoreManager Pro}
+\label{tab:test_summary}
+\end{table}
+
+\section{Exécution des Tests en Ligne de Commande}
+
+\begin{lstlisting}[language=bash, caption={Commande d'exécution de la suite complète de tests}]
+# Execution de la batterie de tests automatises
+php tests/test_entities.php && \
+php tests/test_repositories.php && \
+php tests/test_vente_service.php && \
+php tests/test_pos_controller.php && \
+php tests/test_views.php && \
+php tests/test_debt_service.php && \
+php tests/test_supply_service.php && \
+php tests/test_auth.php
+\end{lstlisting}
+
+% ==============================================================================
+% CHAPITRE 9 : GUIDE DE SOUTENANCE ORALE & LIVE-CODING
+% ==============================================================================
+\chapter{Guide de Soutenance Orale, Questions Pièges \& Live-Coding}
+
+\section{Déroulement de l'Épreuve Individuelle en Classe (10 Minutes)}
+
+L'épreuve pratique se divise rigoureusement en deux séquences de 5 minutes :
+\begin{enumerate}
+    \item \textbf{Séquence 1 (5 min) — Test de Modification en Live (\emph{Live-Coding})} : Le formateur demande d'ajouter en direct une fonctionnalité inédite ou d'ajuster une règle métier dans le code source.
+    \item \textbf{Séquence 2 (5 min) — Soutenance \& Questions de Code} : L'étudiant explique le fonctionnement d'une méthode, d'une classe ou d'une requête SQL tirée au sort.
+\end{enumerate}
+
+\section{10 Scénarios Types de Live-Coding \& Solutions Prêtes à l'Emploi}
+
+\subsection{Scénario 1 : Ajout d'une Taxe TVA de 18\% sur les Factures}
+\textbf{Demande du formateur :} \emph{« Ajoutez une TVA de 18\% sur le total net de la vente dans \texttt{VenteService}. »}
+\begin{lstlisting}[language=PHP]
+// Solution dans VenteService::validerVente()
+$tauxTVA = 0.18;
+$montantHT = $montantTotalCalcule;
+$montantTVA = round($montantHT * $tauxTVA, 2);
+$montantTTC = $montantHT + $montantTVA;
+// Remplacer montantTotalCalcule par montantTTC dans l'insertion SQL
+\end{lstlisting}
+
+\subsection{Scénario 2 : Plafond de Remise Maximale Autorisée (Ex: 20\%)}
+\textbf{Demande du formateur :} \emph{« Empêchez un vendeur d'appliquer une remise supérieure à 20\% du prix unitaire. »}
+\begin{lstlisting}[language=PHP]
+// Solution dans VenteService::preparerLigneArticle()
+$remiseMax = $produit->getPrixVente() * 0.20;
+if ($remise > $remiseMax) {
+    throw new InvalidArgumentException(
+        "La remise depasse le maximum autorise de 20% (" . number_format($remiseMax, 0) . " FCFA)."
+    );
+}
+\end{lstlisting}
+
+\subsection{Scénario 3 : Blocage Automatique d'un Client Ayant des Dettes en Retard}
+\textbf{Demande du formateur :} \emph{« Interdisez tout nouvel achat à crédit si le client a au moins une dette avec statut \texttt{EN\_RETARD}. »}
+\begin{lstlisting}[language=PHP]
+// Solution dans ClientRepository ou VenteService
+$stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM dettes WHERE client_id = :cid AND statut_id = 3");
+$stmtCheck->execute([':cid' => $clientId]);
+if ((int)$stmtCheck->fetchColumn() > 0) {
+    throw new RuntimeException("Client bloque : presence de creances impayees en retard.");
+}
+\end{lstlisting}
+
+\subsection{Scénario 4 : Ajout du Moyen de Paiement « Chèque »}
+\textbf{Demande du formateur :} \emph{« Intégrez le paiement par chèque dans le système. »}
+\begin{lstlisting}[language=SQL]
+-- Insertion en base de donnees immediate sans modification de classe !
+INSERT INTO modes_paiement (code, libelle, est_actif) VALUES ('CHEQUE', 'Paiement par Chèque', TRUE);
+\end{lstlisting}
+
+\subsection{Scénario 5 : Calcul du Taux de Rotation du Stock}
+\textbf{Demande du formateur :} \emph{« Ajoutez une méthode de valorisation globale du stock dans \texttt{ProduitRepository}. »}
+\begin{lstlisting}[language=PHP]
+public function getValeurTotaleStock(): float
+{
+    $stmt = $this->pdo->query("SELECT SUM(prix_achat * qte_stock) AS total FROM produits");
+    return (float)$stmt->fetchColumn();
+}
+\end{lstlisting}
+
+\subsection{Scénarios 6 à 10 : Réponses Rapides}
+\begin{itemize}
+    \item \textbf{Scénario 6 (Alerte Stock Email)} : Dans \texttt{validerVente()}, si \texttt{\$produit->estEnAlerte()}, journaliser l'alerte critique dans un fichier de log.
+    \item \textbf{Scénario 7 (Export CSV Journalier)} : Parcourir \texttt{\$venteService->getVentesDuJour()} et formater les lignes avec \texttt{fputcsv(\$handle, ...)}.
+    \item \textbf{Scénario 8 (Clôture de Caisse)} : Calculer la somme des encaissements par \texttt{mode\_paiement\_id} via \texttt{GROUP BY}.
+    \item \textbf{Scénario 9 (Historique Client)} : Appeler \texttt{\$detteRepository->findByClient(\$clientId)}.
+    \item \textbf{Scénario 10 (Duplication de BL)} : Récupérer un \texttt{Approvisionnement} existant et réinjecter ses lignes dans \texttt{creerApprovisionnement()}.
+\end{itemize}
+
+\section{15 Questions Pièges Fréquentes \& Réponses Modèles pour l'Oral}
+
+\begin{oralbox}{1. Pourquoi avoir créé un Singleton pour Database ?}
+\textbf{Réponse :} Pour garantir qu'une seule et unique connexion PDO physique est ouverte par requête HTTP, économisant ainsi les sockets réseau et la mémoire vive du serveur SGBD.
+\end{oralbox}
+
+\begin{oralbox}{2. Que fait PRAGMA foreign\_keys = ON sous SQLite ?}
+\textbf{Réponse :} Par défaut, SQLite n'applique pas les contraintes d'intégrité référentielle. Cette directive active la vérification obligatoire des clés étrangères et des règles \texttt{ON DELETE RESTRICT/CASCADE}.
+\end{oralbox}
+
+\begin{oralbox}{3. Pourquoi désactiver l'émulation des requêtes préparées (EMULATE\_PREPARES => false) ?}
+\textbf{Réponse :} Pour forcer le SGBD à compiler la requête et à dissocier la syntaxe SQL des valeurs, garantissant une protection absolue contre toute forme d'injection SQL.
+\end{oralbox}
+
+\begin{oralbox}{4. Que se passe-t-il si un crash survient pendant l'insertion des lignes de vente ?}
+\textbf{Réponse :} Le bloc \texttt{catch (Throwable \$e)} intercepte l'erreur et déclenche immédiatement \texttt{\$pdo->rollBack()}, annulant l'insertion de l'en-tête de vente et restaurant le stock initial.
+\end{oralbox}
+
+\begin{oralbox}{5. Pourquoi avoir utilisé des classes pures plutôt que des enum ?}
+\textbf{Réponse :} Pour refléter fidèlement le schéma relationnel en 3FN (avec clés primaires \texttt{id}, codes et libellés) et permettre l'ajout dynamique de statuts ou moyens de paiement en SQL sans recompiler le code PHP.
+\end{oralbox}
+
+\begin{oralbox}{6. Comment fonctionne la méthode getCreditDisponible() dans la classe Client ?}
+\textbf{Réponse :} Elle calcule la différence entre la limite de crédit autorisée et le total des dettes actuelles du client : $\max(0, \text{limiteCredit} - \text{totalDettesActuelles})$. L'utilisation de $\max(0, \dots)$ empêche tout résultat négatif aberrant si l'encours dépassait exceptionnellement la limite.
+\end{oralbox}
+
+\begin{oralbox}{7. Pourquoi utiliser password\_hash() et password\_verify() avec BCRYPT ?}
+\textbf{Réponse :} Bcrypt intègre automatiquement un sel aléatoire (\emph{salt}) généré cryptographiquement et un facteur de coût (\emph{cost factor}) qui ralentit les attaques par force brute et dictionnaire, rendant les tables arc-en-ciel (\emph{rainbow tables}) inopérantes.
+\end{oralbox}
+
+\begin{oralbox}{8. Quel est le rôle de la méthode SessionManager::regenerateId(true) ?}
+\textbf{Réponse :} Elle régénère l'identifiant de cookie de session PHP immédiatement après l'authentification et supprime l'ancien identifiant, protégeant ainsi l'utilisateur contre les attaques de fixation de session (\emph{Session Fixation}).
+\end{oralbox}
+
+\begin{oralbox}{9. Pourquoi avoir séparé VenteService et POSController ?}
+\textbf{Réponse :} Pour respecter le principe de responsabilité unique (SRP). Le contrôleur gère uniquement la couche transport HTTP (requêtes, formulaires, redirections PRG, formatage JSON), tandis que le service encapsule la logique métier pure et les transactions SQL (calculs, déstockage, dettes).
+\end{oralbox}
+
+\begin{oralbox}{10. Comment SQLite garantit-il la cohérence des transactions sans serveur dédié ?}
+\textbf{Réponse :} SQLite utilise un journal de rollback (\emph{Rollback Journal}) ou un fichier WAL (\emph{Write-Ahead Logging}) au niveau du système de fichiers de l'OS avec verrouillage exclusif du fichier \texttt{erp.db} pendant les blocs \texttt{BEGIN TRANSACTION / COMMIT}.
+\end{oralbox}
+
+% ==============================================================================
+% CONCLUSION & ANNEXES
+% ==============================================================================
+\chapter*{Conclusion \& Perspectives}
+\addcontentsline{toc}{chapter}{Conclusion \& Perspectives}
+
+L'application \textbf{StoreManager Pro} démontre avec succès la viabilité et l'élégance d'une architecture \textbf{PHP 8.2+ POO Pure From Scratch} appliquée à la gestion commerciale intégrée. En s'affranchissant des dépendances lourdes des frameworks tout en respectant scrupuleusement les standards de génie logiciel (SOLID, MVC, Design Patterns, Transactions ACID, Résilience BDD), ce projet allie performance brute, robustesse financière et maintenabilité à long terme.
+
+\section*{Perspectives d'Évolution Future}
+\begin{enumerate}
+    \item \textbf{API RESTful Sécurisée par JWT} : Exposition des points de terminaison pour connecter des terminaux mobiles de caisse sous Android/iOS.
+    \item \textbf{Synchronisation Multi-Magasins en Temps Réel} : Réplication asynchrone des stocks entre plusieurs succursales via WebSockets.
+    \item \textbf{Module d'Inventaire par Reconnaissance Visuelle} : Scan automatisé des rayonnages par caméra embarquée.
+\end{enumerate}
+
+\clearpage
+
+\chapter*{Annexes : Index des Classes \& Tables SQL}
+\addcontentsline{toc}{chapter}{Annexes : Index des Classes \& Tables SQL}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Espace de Noms / Classe} & \textbf{Rôle dans l'Architecture} \\
+\midrule
+\texttt{App\textbackslash Core\textbackslash Database} & Singleton de gestion de la connexion PDO avec Fallback SQLite. \\
+\texttt{App\textbackslash Core\textbackslash Router} & Moteur de routage HTTP basé sur des expressions régulières. \\
+\texttt{App\textbackslash Core\textbackslash SessionManager} & Gestion sécurisée des sessions, cookies et messages Flash. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Produit} & Entité métier : calcul des marges, seuils d'alerte et gestion du stock. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Client} & Entité métier : contrôle de solvabilité et plafond de crédit. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Vente} & Entité maître de facturation et encaissement en caisse. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash LigneVente} & Ligne de détail d'une facture avec remises unitaires. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Dette} & Créance client avec échéance et historique de règlements. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Paiement} & Versement ou acompte rattaché à une créance. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Approvisionnement} & Bon de livraison fournisseur et réceptions logistiques. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash LigneApprovisionnement} & Ligne d'approvisionnement avec coût d'acquisition. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash User} & Compte d'accès avec mot de passe haché et rôle RBAC. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Role} & Classe pure de référence pour les prérogatives d'accès. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash ModePaiement} & Classe pure de référence pour les canaux de règlement. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash StatutDette} & Classe pure de référence pour les états de créance. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash StatutAppro} & Classe pure de référence pour les états de bon de livraison. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Categorie} & Classe pure de référence pour les familles de produits. \\
+\texttt{App\textbackslash Model\textbackslash Entity\textbackslash Fournisseur} & Tiers fournisseur pour la chaîne d'approvisionnement. \\
+\texttt{App\textbackslash Model\textbackslash Repository\textbackslash *} & 9 classes d'accès aux données sécurisées par requêtes préparées. \\
+\texttt{App\textbackslash Service\textbackslash VenteService} & Orchestration transactionnelle des ventes en caisse et des dettes. \\
+\texttt{App\textbackslash Service\textbackslash DebtService} & Gestion des créances, recouvrements et amortissements. \\
+\texttt{App\textbackslash Service\textbackslash SupplyService} & Gestion des réceptions de marchandises et des stocks. \\
+\texttt{App\textbackslash Service\textbackslash AuthManager} & Gestion des habilitations RBAC et de la sécurité des accès. \\
+\texttt{App\textbackslash Controller\textbackslash POSController} & Contrôleur de caisse tactile et gestion du panier. \\
+\texttt{App\textbackslash Controller\textbackslash AuthController} & Contrôleur d'authentification et gestion des sessions. \\
+\texttt{App\textbackslash Controller\textbackslash DetteController} & Contrôleur de gestion des créances et recouvrements. \\
+\texttt{App\textbackslash Controller\textbackslash SupplyController} & Contrôleur des réceptions de bons de livraison. \\
+\bottomrule
+\end{tabularx}
+\caption{Index des Composants Applicatifs de StoreManager Pro}
+\end{table}
+
+\end{document}
