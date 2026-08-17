@@ -2,14 +2,13 @@
 
 namespace App\Model\Entity;
 
-class Role
+class Role extends AbstractEntity
 {
     public const ADMIN = 'ADMIN';
     public const VENTE = 'VENTE';
     public const STOCK = 'STOCK';
     public const INVENTAIRE = 'INVENTAIRE';
 
-    private ?int $id;
     private string $code;
     private string $libelle;
     private ?string $description;
@@ -20,21 +19,10 @@ class Role
         string $libelle = '',
         ?string $description = null
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->code = strtoupper(trim($code));
         $this->libelle = trim($libelle);
         $this->description = $description;
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getCode(): string

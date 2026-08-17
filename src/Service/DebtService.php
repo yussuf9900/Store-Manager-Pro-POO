@@ -4,7 +4,9 @@ namespace App\Service;
 
 use App\Core\Database;
 use App\Model\Entity\Dette;
+use App\Model\Entity\ModePaiement;
 use App\Model\Entity\Paiement;
+use App\Model\Entity\User;
 use App\Model\Repository\ClientRepository;
 use App\Model\Repository\DetteRepository;
 use DateTime;
@@ -63,12 +65,12 @@ class DebtService
 
         try {
             $paiement = new Paiement(
-                detteId: $detteId,
+                dette: $dette,
                 montant: $montant,
                 datePaiement: new DateTime(),
-                modePaiementId: $modePaiementId,
+                modePaiement: new ModePaiement(id: $modePaiementId),
                 referencePaiement: $reference,
-                userId: $userId
+                agent: new User(id: $userId)
             );
 
             $this->detteRepository->savePaiement($paiement);
@@ -85,7 +87,9 @@ class DebtService
 
             $this->detteRepository->updateMontantRestantEtStatut($detteId, $nouveauReste, $statutId);
 
-            $this->clientRepository->diminuerDette($dette->getClientId(), $montant);
+            if ($dette->getClient() !== null && $dette->getClient()->getId() !== null) {
+                $this->clientRepository->diminuerDette($dette->getClient()->getId(), $montant);
+            }
 
             $this->pdo->commit();
 
@@ -102,7 +106,7 @@ class DebtService
                 'nouveau_reste' => $nouveauReste,
                 'est_soldee' => $estSoldee,
                 'statut_id' => $statutId,
-                'client_id' => $dette->getClientId(),
+                'client_id' => $dette->getClient()?->getId(),
                 'message' => $message
             ];
         } catch (Throwable $e) {

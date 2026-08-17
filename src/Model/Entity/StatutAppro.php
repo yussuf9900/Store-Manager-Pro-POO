@@ -2,13 +2,12 @@
 
 namespace App\Model\Entity;
 
-class StatutAppro
+class StatutAppro extends AbstractEntity
 {
     public const EN_ATTENTE = 'EN_ATTENTE';
     public const RECU = 'RECU';
     public const ANNULE = 'ANNULE';
 
-    private ?int $id;
     private string $code;
     private string $libelle;
 
@@ -17,20 +16,9 @@ class StatutAppro
         string $code = '',
         string $libelle = ''
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->code = strtoupper(trim($code));
         $this->libelle = trim($libelle);
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getCode(): string
@@ -57,16 +45,16 @@ class StatutAppro
 
     public function isRecu(): bool
     {
-        return $this->code === self::RECU;
+        return $this->code === self::RECU || $this->id === 2;
     }
 
     public function isEnAttente(): bool
     {
-        return $this->code === self::EN_ATTENTE;
+        return $this->code === self::EN_ATTENTE || $this->id === 1;
     }
 
     public function isAnnule(): bool
     {
-        return $this->code === self::ANNULE;
+        return $this->code === self::ANNULE || $this->id === 3;
     }
 }

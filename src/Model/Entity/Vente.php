@@ -5,20 +5,16 @@ namespace App\Model\Entity;
 use DateTime;
 use InvalidArgumentException;
 
-class Vente
+class Vente extends AbstractEntity
 {
-    private ?int $id;
     private string $numeroFacture;
     private DateTime $dateVente;
     private float $montantTotal;
     private float $montantPaye;
     private float $montantRestant;
-    private int $modePaiementId;
     private ?ModePaiement $modePaiement;
     private string $statut;
-    private ?int $clientId;
     private ?Client $client;
-    private int $userId;
     private ?User $vendeur;
     private array $lignes = [];
     private ?DateTime $dateCreation;
@@ -30,45 +26,28 @@ class Vente
         float $montantTotal = 0.0,
         float $montantPaye = 0.0,
         float $montantRestant = 0.0,
-        int $modePaiementId = 1,
         ?ModePaiement $modePaiement = null,
         string $statut = 'VALIDEE',
-        ?int $clientId = null,
         ?Client $client = null,
-        int $userId = 1,
         ?User $vendeur = null,
         array $lignes = [],
         ?DateTime $dateCreation = null
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->numeroFacture = trim($numeroFacture);
         $this->dateVente = $dateVente ?? new DateTime();
         $this->montantTotal = max(0.0, $montantTotal);
         $this->montantPaye = max(0.0, $montantPaye);
         $this->montantRestant = max(0.0, $montantRestant);
-        $this->modePaiementId = $modePaiementId;
         $this->modePaiement = $modePaiement;
         $this->statut = strtoupper(trim($statut));
-        $this->clientId = $clientId;
         $this->client = $client;
-        $this->userId = $userId;
         $this->vendeur = $vendeur;
         $this->dateCreation = $dateCreation ?? new DateTime();
 
         foreach ($lignes as $ligne) {
             $this->ajouterLigne($ligne);
         }
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getNumeroFacture(): string
@@ -136,17 +115,6 @@ class Vente
         return $this;
     }
 
-    public function getModePaiementId(): int
-    {
-        return $this->modePaiementId;
-    }
-
-    public function setModePaiementId(int $modePaiementId): self
-    {
-        $this->modePaiementId = $modePaiementId;
-        return $this;
-    }
-
     public function getModePaiement(): ?ModePaiement
     {
         return $this->modePaiement;
@@ -155,9 +123,6 @@ class Vente
     public function setModePaiement(?ModePaiement $modePaiement): self
     {
         $this->modePaiement = $modePaiement;
-        if ($modePaiement !== null && $modePaiement->getId() !== null) {
-            $this->modePaiementId = $modePaiement->getId();
-        }
         return $this;
     }
 
@@ -172,17 +137,6 @@ class Vente
         return $this;
     }
 
-    public function getClientId(): ?int
-    {
-        return $this->clientId;
-    }
-
-    public function setClientId(?int $clientId): self
-    {
-        $this->clientId = $clientId;
-        return $this;
-    }
-
     public function getClient(): ?Client
     {
         return $this->client;
@@ -191,20 +145,6 @@ class Vente
     public function setClient(?Client $client): self
     {
         $this->client = $client;
-        if ($client !== null && $client->getId() !== null) {
-            $this->clientId = $client->getId();
-        }
-        return $this;
-    }
-
-    public function getUserId(): int
-    {
-        return $this->userId;
-    }
-
-    public function setUserId(int $userId): self
-    {
-        $this->userId = $userId;
         return $this;
     }
 
@@ -216,9 +156,6 @@ class Vente
     public function setVendeur(?User $vendeur): self
     {
         $this->vendeur = $vendeur;
-        if ($vendeur !== null && $vendeur->getId() !== null) {
-            $this->userId = $vendeur->getId();
-        }
         return $this;
     }
 
@@ -265,11 +202,11 @@ class Vente
             return true;
         }
 
-        if ($this->modePaiement !== null && $this->modePaiement->getCode() === ModePaiement::DETTE) {
-            return true;
+        if ($this->modePaiement !== null) {
+            return $this->modePaiement->getCode() === ModePaiement::DETTE || $this->modePaiement->getId() === 5;
         }
 
-        return $this->modePaiementId === 5;
+        return false;
     }
 
     public function getNombreArticles(): int

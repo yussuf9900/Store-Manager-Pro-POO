@@ -4,9 +4,8 @@ namespace App\Model\Entity;
 
 use DateTime;
 
-class Fournisseur
+class Fournisseur extends AbstractEntity
 {
-    private ?int $id;
     private string $nom;
     private ?string $contactNom;
     private string $telephone;
@@ -23,24 +22,13 @@ class Fournisseur
         ?string $adresse = null,
         ?DateTime $dateCreation = null
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->nom = trim($nom);
         $this->contactNom = $contactNom !== null ? trim($contactNom) : null;
         $this->telephone = trim($telephone);
         $this->email = $email !== null ? strtolower(trim($email)) : null;
         $this->adresse = $adresse !== null ? trim($adresse) : null;
         $this->dateCreation = $dateCreation ?? new DateTime();
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getNom(): string

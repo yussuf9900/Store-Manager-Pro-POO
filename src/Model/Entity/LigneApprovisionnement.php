@@ -4,11 +4,9 @@ namespace App\Model\Entity;
 
 use InvalidArgumentException;
 
-class LigneApprovisionnement
+class LigneApprovisionnement extends AbstractEntity
 {
-    private ?int $id;
-    private ?int $approvisionnementId;
-    private int $produitId;
+    private ?Approvisionnement $approvisionnement;
     private ?Produit $produit;
     private int $quantite;
     private float $prixAchatUnitaire;
@@ -16,58 +14,31 @@ class LigneApprovisionnement
 
     public function __construct(
         ?int $id = null,
-        ?int $approvisionnementId = null,
-        int $produitId = 0,
+        ?Approvisionnement $approvisionnement = null,
         ?Produit $produit = null,
         int $quantite = 1,
         float $prixAchatUnitaire = 0.0,
         ?float $sousTotal = null
     ) {
-        $this->id = $id;
-        $this->approvisionnementId = $approvisionnementId;
-        $this->produitId = $produitId;
+        parent::__construct($id);
+        $this->approvisionnement = $approvisionnement;
         $this->produit = $produit;
-        if ($produit !== null && $produit->getId() !== null) {
-            $this->produitId = $produit->getId();
-            if ($prixAchatUnitaire <= 0) {
-                $prixAchatUnitaire = $produit->getPrixAchat();
-            }
+        if ($produit !== null && $prixAchatUnitaire <= 0) {
+            $prixAchatUnitaire = $produit->getPrixAchat();
         }
         $this->quantite = max(1, $quantite);
         $this->prixAchatUnitaire = max(0.0, $prixAchatUnitaire);
         $this->sousTotal = $sousTotal ?? $this->calculerSousTotal();
     }
 
-    public function getId(): ?int
+    public function getApprovisionnement(): ?Approvisionnement
     {
-        return $this->id;
+        return $this->approvisionnement;
     }
 
-    public function setId(?int $id): self
+    public function setApprovisionnement(?Approvisionnement $approvisionnement): self
     {
-        $this->id = $id;
-        return $this;
-    }
-
-    public function getApprovisionnementId(): ?int
-    {
-        return $this->approvisionnementId;
-    }
-
-    public function setApprovisionnementId(?int $approvisionnementId): self
-    {
-        $this->approvisionnementId = $approvisionnementId;
-        return $this;
-    }
-
-    public function getProduitId(): int
-    {
-        return $this->produitId;
-    }
-
-    public function setProduitId(int $produitId): self
-    {
-        $this->produitId = $produitId;
+        $this->approvisionnement = $approvisionnement;
         return $this;
     }
 
@@ -79,9 +50,6 @@ class LigneApprovisionnement
     public function setProduit(?Produit $produit): self
     {
         $this->produit = $produit;
-        if ($produit !== null && $produit->getId() !== null) {
-            $this->produitId = $produit->getId();
-        }
         return $this;
     }
 

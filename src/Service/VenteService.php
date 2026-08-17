@@ -3,6 +3,8 @@
 namespace App\Service;
 
 use App\Core\Database;
+use App\Model\Entity\Categorie;
+use App\Model\Entity\Role;
 use App\Model\Entity\Vente;
 use App\Model\Entity\LigneVente;
 use App\Model\Entity\Client;
@@ -306,42 +308,38 @@ class VenteService
         }
     }
 
-    public function getVente(int $id): ?Vente
+    public function getVente(int $venteId): ?Vente
     {
         $pdo = Database::getPDO();
         $stmt = $pdo->prepare("{$this->getBaseSelect()} WHERE v.id = :id LIMIT 1");
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->bindValue(':id', $venteId, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        if (!$row) {
-            return null;
-        }
-
-        return $this->hydrateVenteWithLignes($row);
+        return $row ? $this->hydrateVenteWithLignes($row) : null;
     }
 
     public function getVenteByFacture(string $numeroFacture): ?Vente
     {
         $pdo = Database::getPDO();
-        $stmt = $pdo->prepare("{$this->getBaseSelect()} WHERE UPPER(v.numero_facture) = :num LIMIT 1");
-        $stmt->bindValue(':num', strtoupper(trim($numeroFacture)), PDO::PARAM_STR);
+        $stmt = $pdo->prepare("{$this->getBaseSelect()} WHERE v.numero_facture = :facture LIMIT 1");
+        $stmt->bindValue(':facture', trim($numeroFacture), PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        if (!$row) {
-            return null;
-        }
-
-        return $this->hydrateVenteWithLignes($row);
+        return $row ? $this->hydrateVenteWithLignes($row) : null;
     }
 
     public function getVentesDuJour(?DateTime $date = null): array
     {
-        $targetDate = ($date ?? new DateTime())->format('Y-m-d');
+        $dateStr = ($date ?? new DateTime())->format('Y-m-d');
         $pdo = Database::getPDO();
-        $stmt = $pdo->prepare("{$this->getBaseSelect()} WHERE DATE(v.date_vente) = :date_jour ORDER BY v.date_vente DESC, v.id DESC");
-        $stmt->bindValue(':date_jour', $targetDate, PDO::PARAM_STR);
+        $stmt = $pdo->prepare(
+            "{$this->getBaseSelect()} 
+             WHERE DATE(v.date_vente) = :date_jour 
+             ORDER BY v.date_vente DESC, v.id DESC"
+        );
+        $stmt->bindValue(':date_jour', $dateStr, PDO::PARAM_STR);
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
@@ -351,7 +349,11 @@ class VenteService
     public function getVentesClient(int $clientId): array
     {
         $pdo = Database::getPDO();
-        $stmt = $pdo->prepare("{$this->getBaseSelect()} WHERE v.client_id = :client_id ORDER BY v.date_vente DESC, v.id DESC");
+        $stmt = $pdo->prepare(
+            "{$this->getBaseSelect()} 
+             WHERE v.client_id = :client_id 
+             ORDER BY v.date_vente DESC, v.id DESC"
+        );
         $stmt->bindValue(':client_id', $clientId, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll();
@@ -363,15 +365,16 @@ class VenteService
     {
         $targetDate = ($date ?? new DateTime())->format('Y-m-d');
         $pdo = Database::getPDO();
+
         $stmt = $pdo->prepare(
             "SELECT 
-                COUNT(*) AS total_ventes,
+                COUNT(id) AS total_ventes,
                 COALESCE(SUM(montant_total), 0) AS total_ca,
                 COALESCE(SUM(montant_paye), 0) AS total_encaisse,
                 COALESCE(SUM(montant_restant), 0) AS total_credit,
                 COALESCE(AVG(montant_total), 0) AS panier_moyen
              FROM ventes 
-             WHERE statut = 'VALIDEE' AND DATE(date_vente) = :date_jour"
+             WHERE DATE(date_vente) = :date_jour"
         );
         $stmt->bindValue(':date_jour', $targetDate, PDO::PARAM_STR);
         $stmt->execute();
@@ -419,12 +422,13 @@ class VenteService
 
         $vendeur = null;
         if (!empty($row['user_id_pk'])) {
+            $role = !empty($row['user_role_id']) ? new Role(id: (int)$row['user_role_id']) : null;
             $vendeur = new User(
                 id: (int)$row['user_id_pk'],
                 nom: $row['user_nom'] ?? '',
                 prenom: $row['user_prenom'] ?? '',
                 email: $row['user_email'] ?? '',
-                roleId: isset($row['user_role_id']) ? (int)$row['user_role_id'] : 1
+                role: $role
             );
         }
 
@@ -445,12 +449,9 @@ class VenteService
             montantTotal: isset($row['montant_total']) ? (float)$row['montant_total'] : 0.0,
             montantPaye: isset($row['montant_paye']) ? (float)$row['montant_paye'] : 0.0,
             montantRestant: isset($row['montant_restant']) ? (float)$row['montant_restant'] : 0.0,
-            modePaiementId: isset($row['mode_paiement_id']) ? (int)$row['mode_paiement_id'] : 1,
             modePaiement: $modePaiement,
             statut: $row['statut'] ?? 'VALIDEE',
-            clientId: isset($row['client_id']) && $row['client_id'] !== null ? (int)$row['client_id'] : null,
             client: $client,
-            userId: isset($row['user_id']) ? (int)$row['user_id'] : 1,
             vendeur: $vendeur,
             dateCreation: !empty($row['created_at']) ? new DateTime($row['created_at']) : new DateTime()
         );
@@ -479,7 +480,8 @@ class VenteService
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map(function ($row) {
+        return array_map(function ($row) use ($venteId) {
+            $cat = !empty($row['prod_cat_id']) ? new Categorie(id: (int)$row['prod_cat_id']) : null;
             $produit = new Produit(
                 id: (int)$row['prod_id'],
                 code: $row['prod_code'] ?? '',
@@ -489,13 +491,12 @@ class VenteService
                 prixVente: isset($row['prod_prix_vente']) ? (float)$row['prod_prix_vente'] : 0.0,
                 qteStock: isset($row['prod_qte_stock']) ? (int)$row['prod_qte_stock'] : 0,
                 seuilAlerte: isset($row['prod_seuil_alerte']) ? (int)$row['prod_seuil_alerte'] : 5,
-                categorieId: isset($row['prod_cat_id']) ? (int)$row['prod_cat_id'] : null
+                categorie: $cat
             );
 
             return new LigneVente(
                 id: isset($row['id']) ? (int)$row['id'] : null,
-                venteId: isset($row['vente_id']) ? (int)$row['vente_id'] : null,
-                produitId: (int)$row['produit_id'],
+                vente: new Vente(id: $venteId),
                 produit: $produit,
                 quantite: (int)$row['quantite'],
                 prixUnitaire: (float)$row['prix_unitaire'],

@@ -4,11 +4,9 @@ namespace App\Model\Entity;
 
 use InvalidArgumentException;
 
-class LigneVente
+class LigneVente extends AbstractEntity
 {
-    private ?int $id;
-    private ?int $venteId;
-    private int $produitId;
+    private ?Vente $vente;
     private ?Produit $produit;
     private int $quantite;
     private float $prixUnitaire;
@@ -17,23 +15,18 @@ class LigneVente
 
     public function __construct(
         ?int $id = null,
-        ?int $venteId = null,
-        int $produitId = 0,
+        ?Vente $vente = null,
         ?Produit $produit = null,
         int $quantite = 1,
         float $prixUnitaire = 0.0,
         float $remise = 0.0,
         ?float $sousTotal = null
     ) {
-        $this->id = $id;
-        $this->venteId = $venteId;
-        $this->produitId = $produitId;
+        parent::__construct($id);
+        $this->vente = $vente;
         $this->produit = $produit;
-        if ($produit !== null && $produit->getId() !== null) {
-            $this->produitId = $produit->getId();
-            if ($prixUnitaire <= 0) {
-                $prixUnitaire = $produit->getPrixVente();
-            }
+        if ($produit !== null && $prixUnitaire <= 0) {
+            $prixUnitaire = $produit->getPrixVente();
         }
         $this->quantite = max(1, $quantite);
         $this->prixUnitaire = max(0.0, $prixUnitaire);
@@ -41,36 +34,14 @@ class LigneVente
         $this->sousTotal = $sousTotal ?? $this->calculerSousTotal();
     }
 
-    public function getId(): ?int
+    public function getVente(): ?Vente
     {
-        return $this->id;
+        return $this->vente;
     }
 
-    public function setId(?int $id): self
+    public function setVente(?Vente $vente): self
     {
-        $this->id = $id;
-        return $this;
-    }
-
-    public function getVenteId(): ?int
-    {
-        return $this->venteId;
-    }
-
-    public function setVenteId(?int $venteId): self
-    {
-        $this->venteId = $venteId;
-        return $this;
-    }
-
-    public function getProduitId(): int
-    {
-        return $this->produitId;
-    }
-
-    public function setProduitId(int $produitId): self
-    {
-        $this->produitId = $produitId;
+        $this->vente = $vente;
         return $this;
     }
 
@@ -82,9 +53,6 @@ class LigneVente
     public function setProduit(?Produit $produit): self
     {
         $this->produit = $produit;
-        if ($produit !== null && $produit->getId() !== null) {
-            $this->produitId = $produit->getId();
-        }
         return $this;
     }
 

@@ -102,6 +102,10 @@ class ApprovisionnementRepository extends AbstractRepository
 
     public function save(Approvisionnement $appro): bool
     {
+        $statutId = $appro->getStatut()?->getId() ?? 1;
+        $fournisseurId = $appro->getFournisseur()?->getId() ?? 1;
+        $userId = $appro->getAgentStock()?->getId() ?? 1;
+
         if ($appro->getId() === null) {
             $stmt = $this->pdo->prepare(
                 "INSERT INTO approvisionnements (numero_bl, date_appro, montant_total, statut_id, fournisseur_id, user_id, created_at)
@@ -110,9 +114,9 @@ class ApprovisionnementRepository extends AbstractRepository
             $stmt->bindValue(':numero_bl', $appro->getNumeroBL(), PDO::PARAM_STR);
             $stmt->bindValue(':date_appro', $appro->getDateAppro()->format('Y-m-d H:i:s'), PDO::PARAM_STR);
             $stmt->bindValue(':montant_total', $appro->getMontantTotal());
-            $stmt->bindValue(':statut_id', $appro->getStatutId(), PDO::PARAM_INT);
-            $stmt->bindValue(':fournisseur_id', $appro->getFournisseurId(), PDO::PARAM_INT);
-            $stmt->bindValue(':user_id', $appro->getUserId(), PDO::PARAM_INT);
+            $stmt->bindValue(':statut_id', $statutId, PDO::PARAM_INT);
+            $stmt->bindValue(':fournisseur_id', $fournisseurId, PDO::PARAM_INT);
+            $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
             $stmt->bindValue(':created_at', $appro->getDateCreation() ? $appro->getDateCreation()->format('Y-m-d H:i:s') : date('Y-m-d H:i:s'), PDO::PARAM_STR);
 
             $result = $stmt->execute();
@@ -135,9 +139,9 @@ class ApprovisionnementRepository extends AbstractRepository
         $stmt->bindValue(':numero_bl', $appro->getNumeroBL(), PDO::PARAM_STR);
         $stmt->bindValue(':date_appro', $appro->getDateAppro()->format('Y-m-d H:i:s'), PDO::PARAM_STR);
         $stmt->bindValue(':montant_total', $appro->getMontantTotal());
-        $stmt->bindValue(':statut_id', $appro->getStatutId(), PDO::PARAM_INT);
-        $stmt->bindValue(':fournisseur_id', $appro->getFournisseurId(), PDO::PARAM_INT);
-        $stmt->bindValue(':user_id', $appro->getUserId(), PDO::PARAM_INT);
+        $stmt->bindValue(':statut_id', $statutId, PDO::PARAM_INT);
+        $stmt->bindValue(':fournisseur_id', $fournisseurId, PDO::PARAM_INT);
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
         $stmt->bindValue(':id', $appro->getId(), PDO::PARAM_INT);
 
         return $stmt->execute();
@@ -145,13 +149,16 @@ class ApprovisionnementRepository extends AbstractRepository
 
     public function saveLigne(LigneApprovisionnement $ligne): bool
     {
+        $approId = $ligne->getApprovisionnement()?->getId();
+        $produitId = $ligne->getProduit()?->getId() ?? 0;
+
         if ($ligne->getId() === null) {
             $stmt = $this->pdo->prepare(
                 "INSERT INTO lignes_approvisionnement (approvisionnement_id, produit_id, quantite, prix_achat_unitaire, sous_total)
                  VALUES (:appro_id, :produit_id, :quantite, :prix_achat, :sous_total)"
             );
-            $stmt->bindValue(':appro_id', $ligne->getApprovisionnementId(), PDO::PARAM_INT);
-            $stmt->bindValue(':produit_id', $ligne->getProduitId(), PDO::PARAM_INT);
+            $stmt->bindValue(':appro_id', $approId, $approId !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
+            $stmt->bindValue(':produit_id', $produitId, PDO::PARAM_INT);
             $stmt->bindValue(':quantite', $ligne->getQuantite(), PDO::PARAM_INT);
             $stmt->bindValue(':prix_achat', $ligne->getPrixAchatUnitaire());
             $stmt->bindValue(':sous_total', $ligne->getSousTotal());
@@ -225,6 +232,9 @@ class ApprovisionnementRepository extends AbstractRepository
     {
         if ($appro->getId() !== null) {
             $lignes = $this->findLignesByApproId($appro->getId());
+            foreach ($lignes as $ligne) {
+                $ligne->setApprovisionnement($appro);
+            }
             $appro->setLignes($lignes);
         }
         return $appro;
@@ -249,21 +259,20 @@ class ApprovisionnementRepository extends AbstractRepository
 
     public function delete(int $id): bool
     {
+        $stmtLignes = $this->pdo->prepare("DELETE FROM lignes_approvisionnement WHERE approvisionnement_id = :id");
+        $stmtLignes->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmtLignes->execute();
+
         $stmt = $this->pdo->prepare("DELETE FROM approvisionnements WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function countRecus(): int
+    public function deleteLigne(int $ligneId): bool
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM approvisionnements WHERE statut_id = 2");
-        return (int)$stmt->fetchColumn();
-    }
-
-    public function countEnAttente(): int
-    {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM approvisionnements WHERE statut_id = 1");
-        return (int)$stmt->fetchColumn();
+        $stmt = $this->pdo->prepare("DELETE FROM lignes_approvisionnement WHERE id = :id");
+        $stmt->bindValue(':id', $ligneId, PDO::PARAM_INT);
+        return $stmt->execute();
     }
 
     protected function hydrate(array $row): Approvisionnement
@@ -307,11 +316,8 @@ class ApprovisionnementRepository extends AbstractRepository
             numeroBL: $row['numero_bl'] ?? '',
             dateAppro: $dateAppro,
             montantTotal: isset($row['montant_total']) ? (float)$row['montant_total'] : 0.0,
-            statutId: isset($row['statut_id']) ? (int)$row['statut_id'] : 1,
             statut: $statut,
-            fournisseurId: isset($row['fournisseur_id']) ? (int)$row['fournisseur_id'] : 0,
             fournisseur: $fournisseur,
-            userId: isset($row['user_id']) ? (int)$row['user_id'] : 1,
             agentStock: $agent,
             lignes: [],
             dateCreation: $dateCreation
@@ -330,15 +336,18 @@ class ApprovisionnementRepository extends AbstractRepository
                 prixAchat: isset($row['produit_prix_achat']) ? (float)$row['produit_prix_achat'] : 0.0,
                 prixVente: isset($row['produit_prix_vente']) ? (float)$row['produit_prix_vente'] : 0.0,
                 qteStock: isset($row['produit_qte_stock']) ? (int)$row['produit_qte_stock'] : 0,
-                seuilAlerte: isset($row['produit_seuil_alerte']) ? (int)$row['produit_seuil_alerte'] : 5,
-                categorieId: isset($row['produit_categorie_id']) && $row['produit_categorie_id'] !== null ? (int)$row['produit_categorie_id'] : null
+                seuilAlerte: isset($row['produit_seuil_alerte']) ? (int)$row['produit_seuil_alerte'] : 5
             );
+        }
+
+        $appro = null;
+        if (!empty($row['approvisionnement_id'])) {
+            $appro = new Approvisionnement(id: (int)$row['approvisionnement_id']);
         }
 
         return new LigneApprovisionnement(
             id: isset($row['id']) ? (int)$row['id'] : null,
-            approvisionnementId: isset($row['approvisionnement_id']) ? (int)$row['approvisionnement_id'] : null,
-            produitId: isset($row['produit_id']) ? (int)$row['produit_id'] : 0,
+            approvisionnement: $appro,
             produit: $produit,
             quantite: isset($row['quantite']) ? (int)$row['quantite'] : 1,
             prixAchatUnitaire: isset($row['prix_achat_unitaire']) ? (float)$row['prix_achat_unitaire'] : 0.0,

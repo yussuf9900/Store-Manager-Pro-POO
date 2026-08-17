@@ -4,7 +4,10 @@ namespace App\Service;
 
 use App\Core\Database;
 use App\Model\Entity\Approvisionnement;
+use App\Model\Entity\Fournisseur;
 use App\Model\Entity\LigneApprovisionnement;
+use App\Model\Entity\StatutAppro;
+use App\Model\Entity\User;
 use App\Model\Repository\ApprovisionnementRepository;
 use App\Model\Repository\FournisseurRepository;
 use App\Model\Repository\ProduitRepository;
@@ -86,7 +89,6 @@ class SupplyService
                 }
 
                 $ligne = new LigneApprovisionnement(
-                    produitId: $produitId,
                     produit: $produit,
                     quantite: $quantite,
                     prixAchatUnitaire: $prixAchat
@@ -96,27 +98,28 @@ class SupplyService
                 $total += $ligne->getSousTotal();
             }
 
+            $statutCode = $receptionnerImmediatement ? StatutAppro::RECU : StatutAppro::EN_ATTENTE;
             $statutId = $receptionnerImmediatement ? 2 : 1;
+            $statutLibelle = $receptionnerImmediatement ? 'Réceptionné' : 'En attente';
 
             $appro = new Approvisionnement(
                 numeroBL: $numeroBL,
                 dateAppro: new DateTime(),
                 montantTotal: $total,
-                statutId: $statutId,
-                fournisseurId: $fournisseurId,
+                statut: new StatutAppro(id: $statutId, code: $statutCode, libelle: $statutLibelle),
                 fournisseur: $fournisseur,
-                userId: $userId,
+                agentStock: new User(id: $userId),
                 lignes: $lignes
             );
 
             $this->approRepository->save($appro);
 
             foreach ($lignes as $ligne) {
-                $ligne->setApprovisionnementId($appro->getId());
+                $ligne->setApprovisionnement($appro);
                 $this->approRepository->saveLigne($ligne);
 
-                if ($receptionnerImmediatement) {
-                    $this->produitRepository->incrementStock($ligne->getProduitId(), $ligne->getQuantite());
+                if ($receptionnerImmediatement && $ligne->getProduit()?->getId()) {
+                    $this->produitRepository->incrementStock($ligne->getProduit()->getId(), $ligne->getQuantite());
                 }
             }
 
@@ -141,11 +144,11 @@ class SupplyService
             throw new InvalidArgumentException("Le bon de livraison #{$approvisionnementId} est introuvable.");
         }
 
-        if ($appro->isRecu() || $appro->getStatutId() === 2) {
+        if ($appro->isRecu()) {
             throw new RuntimeException("Ce bon de livraison ({$appro->getNumeroBL()}) a déjà été réceptionné.");
         }
 
-        if ($appro->isAnnule() || $appro->getStatutId() === 3) {
+        if ($appro->isAnnule()) {
             throw new RuntimeException("Ce bon de livraison ({$appro->getNumeroBL()}) est annulé et ne peut pas être réceptionné.");
         }
 
@@ -162,12 +165,13 @@ class SupplyService
 
             foreach ($lignes as $ligne) {
                 $qteReçue = $ligne->getQuantite();
+                $prodId = $ligne->getProduit()?->getId();
 
                 if ($quantitesLivrees !== null) {
-                    if (isset($quantitesLivrees[$ligne->getId()])) {
+                    if ($ligne->getId() !== null && isset($quantitesLivrees[$ligne->getId()])) {
                         $qteReçue = (int)$quantitesLivrees[$ligne->getId()];
-                    } elseif (isset($quantitesLivrees[$ligne->getProduitId()])) {
-                        $qteReçue = (int)$quantitesLivrees[$ligne->getProduitId()];
+                    } elseif ($prodId !== null && isset($quantitesLivrees[$prodId])) {
+                        $qteReçue = (int)$quantitesLivrees[$prodId];
                     }
                 }
 
@@ -180,8 +184,8 @@ class SupplyService
                     $this->approRepository->updateLigne($ligne);
                 }
 
-                if ($qteReçue > 0) {
-                    $this->produitRepository->incrementStock($ligne->getProduitId(), $qteReçue);
+                if ($qteReçue > 0 && $prodId !== null) {
+                    $this->produitRepository->incrementStock($prodId, $qteReçue);
                 }
 
                 $totalArticles += $qteReçue;
@@ -238,8 +242,8 @@ class SupplyService
     {
         $totalCout = $this->approRepository->getTotalCoutEntrees();
         $nombreTotal = $this->approRepository->count();
-        $nombreRecus = $this->approRepository->countRecus();
-        $nombreEnAttente = $this->approRepository->countEnAttente();
+        $nombreRecus = count($this->approRepository->findRecus());
+        $nombreEnAttente = count($this->approRepository->findEnAttente());
         $fournisseurs = $this->fournisseurRepository->findAll();
 
         return [

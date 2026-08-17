@@ -79,6 +79,8 @@ class ProduitRepository extends AbstractRepository
 
     public function save(Produit $produit): bool
     {
+        $catId = $produit->getCategorie()?->getId();
+
         if ($produit->getId() === null) {
             $stmt = $this->pdo->prepare(
                 "INSERT INTO produits (code, libelle, description, prix_achat, prix_vente, qte_stock, seuil_alerte, categorie_id) 
@@ -91,7 +93,7 @@ class ProduitRepository extends AbstractRepository
             $stmt->bindValue(':prix_vente', $produit->getPrixVente());
             $stmt->bindValue(':qte_stock', $produit->getQteStock(), PDO::PARAM_INT);
             $stmt->bindValue(':seuil_alerte', $produit->getSeuilAlerte(), PDO::PARAM_INT);
-            $stmt->bindValue(':categorie_id', $produit->getCategorieId(), $produit->getCategorieId() !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
+            $stmt->bindValue(':categorie_id', $catId, $catId !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
 
             $result = $stmt->execute();
             if ($result) {
@@ -119,7 +121,7 @@ class ProduitRepository extends AbstractRepository
         $stmt->bindValue(':prix_vente', $produit->getPrixVente());
         $stmt->bindValue(':qte_stock', $produit->getQteStock(), PDO::PARAM_INT);
         $stmt->bindValue(':seuil_alerte', $produit->getSeuilAlerte(), PDO::PARAM_INT);
-        $stmt->bindValue(':categorie_id', $produit->getCategorieId(), $produit->getCategorieId() !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
+        $stmt->bindValue(':categorie_id', $catId, $catId !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':id', $produit->getId(), PDO::PARAM_INT);
 
         return $stmt->execute();
@@ -182,6 +184,10 @@ class ProduitRepository extends AbstractRepository
                 libelle: $row['cat_libelle'] ?? '',
                 description: $row['cat_description'] ?? null
             );
+        } elseif (!empty($row['categorie_id'])) {
+            $categorie = new Categorie(
+                id: (int)$row['categorie_id']
+            );
         }
 
         $dateCreation = null;
@@ -198,7 +204,6 @@ class ProduitRepository extends AbstractRepository
             prixVente: isset($row['prix_vente']) ? (float)$row['prix_vente'] : 0.0,
             qteStock: isset($row['qte_stock']) ? (int)$row['qte_stock'] : 0,
             seuilAlerte: isset($row['seuil_alerte']) ? (int)$row['seuil_alerte'] : 5,
-            categorieId: isset($row['categorie_id']) && $row['categorie_id'] !== null ? (int)$row['categorie_id'] : null,
             categorie: $categorie,
             dateCreation: $dateCreation
         );

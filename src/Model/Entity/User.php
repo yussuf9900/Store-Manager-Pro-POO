@@ -4,14 +4,12 @@ namespace App\Model\Entity;
 
 use DateTime;
 
-class User
+class User extends AbstractEntity
 {
-    private ?int $id;
     private string $nom;
     private string $prenom;
     private string $email;
     private string $motDePasse;
-    private int $roleId;
     private ?Role $role;
     private bool $actif;
     private ?DateTime $dateCreation;
@@ -22,31 +20,18 @@ class User
         string $prenom = '',
         string $email = '',
         string $motDePasse = '',
-        int $roleId = 0,
         ?Role $role = null,
         bool $actif = true,
         ?DateTime $dateCreation = null
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->nom = trim($nom);
         $this->prenom = trim($prenom);
         $this->email = strtolower(trim($email));
         $this->motDePasse = $motDePasse;
-        $this->roleId = $roleId;
         $this->role = $role;
         $this->actif = $actif;
         $this->dateCreation = $dateCreation ?? new DateTime();
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getNom(): string
@@ -109,17 +94,6 @@ class User
         return password_verify($plainPassword, $this->motDePasse);
     }
 
-    public function getRoleId(): int
-    {
-        return $this->roleId;
-    }
-
-    public function setRoleId(int $roleId): self
-    {
-        $this->roleId = $roleId;
-        return $this;
-    }
-
     public function getRole(): ?Role
     {
         return $this->role;
@@ -128,9 +102,6 @@ class User
     public function setRole(?Role $role): self
     {
         $this->role = $role;
-        if ($role !== null && $role->getId() !== null) {
-            $this->roleId = $role->getId();
-        }
         return $this;
     }
 

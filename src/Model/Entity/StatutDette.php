@@ -2,13 +2,12 @@
 
 namespace App\Model\Entity;
 
-class StatutDette
+class StatutDette extends AbstractEntity
 {
     public const NON_SOLDEE = 'NON_SOLDEE';
     public const SOLDEE = 'SOLDEE';
     public const EN_RETARD = 'EN_RETARD';
 
-    private ?int $id;
     private string $code;
     private string $libelle;
 
@@ -17,20 +16,9 @@ class StatutDette
         string $code = '',
         string $libelle = ''
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->code = strtoupper(trim($code));
         $this->libelle = trim($libelle);
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getCode(): string
@@ -57,16 +45,16 @@ class StatutDette
 
     public function isSoldee(): bool
     {
-        return $this->code === self::SOLDEE;
+        return $this->code === self::SOLDEE || $this->id === 2;
     }
 
     public function isNonSoldee(): bool
     {
-        return $this->code === self::NON_SOLDEE;
+        return $this->code === self::NON_SOLDEE || $this->id === 1;
     }
 
     public function isEnRetard(): bool
     {
-        return $this->code === self::EN_RETARD;
+        return $this->code === self::EN_RETARD || $this->id === 3;
     }
 }

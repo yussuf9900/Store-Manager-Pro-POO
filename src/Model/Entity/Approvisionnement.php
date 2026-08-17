@@ -5,17 +5,13 @@ namespace App\Model\Entity;
 use DateTime;
 use InvalidArgumentException;
 
-class Approvisionnement
+class Approvisionnement extends AbstractEntity
 {
-    private ?int $id;
     private string $numeroBL;
     private DateTime $dateAppro;
     private float $montantTotal;
-    private int $statutId;
     private ?StatutAppro $statut;
-    private int $fournisseurId;
     private ?Fournisseur $fournisseur;
-    private int $userId;
     private ?User $agentStock;
     private array $lignes = [];
     private ?DateTime $dateCreation;
@@ -25,47 +21,24 @@ class Approvisionnement
         string $numeroBL = '',
         ?DateTime $dateAppro = null,
         float $montantTotal = 0.0,
-        int $statutId = 1,
         ?StatutAppro $statut = null,
-        int $fournisseurId = 0,
         ?Fournisseur $fournisseur = null,
-        int $userId = 1,
         ?User $agentStock = null,
         array $lignes = [],
         ?DateTime $dateCreation = null
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->numeroBL = trim($numeroBL);
         $this->dateAppro = $dateAppro ?? new DateTime();
         $this->montantTotal = max(0.0, $montantTotal);
-        $this->statutId = $statutId;
         $this->statut = $statut;
-        $this->fournisseurId = $fournisseurId;
         $this->fournisseur = $fournisseur;
-        if ($fournisseur !== null && $fournisseur->getId() !== null) {
-            $this->fournisseurId = $fournisseur->getId();
-        }
-        $this->userId = $userId;
         $this->agentStock = $agentStock;
-        if ($agentStock !== null && $agentStock->getId() !== null) {
-            $this->userId = $agentStock->getId();
-        }
         $this->dateCreation = $dateCreation ?? new DateTime();
 
         foreach ($lignes as $ligne) {
             $this->ajouterLigne($ligne);
         }
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getNumeroBL(): string
@@ -75,17 +48,17 @@ class Approvisionnement
 
     public function isRecu(): bool
     {
-        return ($this->statut !== null && $this->statut->isRecu()) || $this->statutId === 2;
+        return $this->statut !== null && ($this->statut->isRecu() || $this->statut->getId() === 2);
     }
 
     public function isEnAttente(): bool
     {
-        return ($this->statut !== null && $this->statut->isEnAttente()) || $this->statutId === 1;
+        return $this->statut !== null && ($this->statut->isEnAttente() || $this->statut->getId() === 1);
     }
 
     public function isAnnule(): bool
     {
-        return ($this->statut !== null && $this->statut->isAnnule()) || $this->statutId === 3;
+        return $this->statut !== null && ($this->statut->isAnnule() || $this->statut->getId() === 3);
     }
 
     public function setNumeroBL(string $numeroBL): self
@@ -119,17 +92,6 @@ class Approvisionnement
         return $this;
     }
 
-    public function getStatutId(): int
-    {
-        return $this->statutId;
-    }
-
-    public function setStatutId(int $statutId): self
-    {
-        $this->statutId = $statutId;
-        return $this;
-    }
-
     public function getStatut(): ?StatutAppro
     {
         return $this->statut;
@@ -138,20 +100,6 @@ class Approvisionnement
     public function setStatut(?StatutAppro $statut): self
     {
         $this->statut = $statut;
-        if ($statut !== null && $statut->getId() !== null) {
-            $this->statutId = $statut->getId();
-        }
-        return $this;
-    }
-
-    public function getFournisseurId(): int
-    {
-        return $this->fournisseurId;
-    }
-
-    public function setFournisseurId(int $fournisseurId): self
-    {
-        $this->fournisseurId = $fournisseurId;
         return $this;
     }
 
@@ -163,20 +111,6 @@ class Approvisionnement
     public function setFournisseur(?Fournisseur $fournisseur): self
     {
         $this->fournisseur = $fournisseur;
-        if ($fournisseur !== null && $fournisseur->getId() !== null) {
-            $this->fournisseurId = $fournisseur->getId();
-        }
-        return $this;
-    }
-
-    public function getUserId(): int
-    {
-        return $this->userId;
-    }
-
-    public function setUserId(int $userId): self
-    {
-        $this->userId = $userId;
         return $this;
     }
 
@@ -188,9 +122,6 @@ class Approvisionnement
     public function setAgentStock(?User $agentStock): self
     {
         $this->agentStock = $agentStock;
-        if ($agentStock !== null && $agentStock->getId() !== null) {
-            $this->userId = $agentStock->getId();
-        }
         return $this;
     }
 

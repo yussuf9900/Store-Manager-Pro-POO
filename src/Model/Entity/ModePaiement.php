@@ -2,7 +2,7 @@
 
 namespace App\Model\Entity;
 
-class ModePaiement
+class ModePaiement extends AbstractEntity
 {
     public const ESPECES = 'ESPECES';
     public const WAVE = 'WAVE';
@@ -10,7 +10,6 @@ class ModePaiement
     public const CARTE_BANCAIRE = 'CARTE_BANCAIRE';
     public const DETTE = 'DETTE';
 
-    private ?int $id;
     private string $code;
     private string $libelle;
     private bool $estActif;
@@ -21,21 +20,10 @@ class ModePaiement
         string $libelle = '',
         bool $estActif = true
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->code = strtoupper(trim($code));
         $this->libelle = trim($libelle);
         $this->estActif = $estActif;
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getCode(): string

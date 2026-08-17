@@ -5,9 +5,8 @@ namespace App\Model\Entity;
 use DateTime;
 use InvalidArgumentException;
 
-class Produit
+class Produit extends AbstractEntity
 {
-    private ?int $id;
     private string $code;
     private string $libelle;
     private ?string $description;
@@ -15,7 +14,6 @@ class Produit
     private float $prixVente;
     private int $qteStock;
     private int $seuilAlerte;
-    private ?int $categorieId;
     private ?Categorie $categorie;
     private ?DateTime $dateCreation;
 
@@ -28,11 +26,10 @@ class Produit
         float $prixVente = 0.0,
         int $qteStock = 0,
         int $seuilAlerte = 5,
-        ?int $categorieId = null,
         ?Categorie $categorie = null,
         ?DateTime $dateCreation = null
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->code = strtoupper(trim($code));
         $this->libelle = trim($libelle);
         $this->description = $description;
@@ -40,20 +37,8 @@ class Produit
         $this->prixVente = max(0.0, $prixVente);
         $this->qteStock = max(0, $qteStock);
         $this->seuilAlerte = max(0, $seuilAlerte);
-        $this->categorieId = $categorieId;
         $this->categorie = $categorie;
         $this->dateCreation = $dateCreation ?? new DateTime();
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getCode(): string
@@ -145,17 +130,6 @@ class Produit
         return $this;
     }
 
-    public function getCategorieId(): ?int
-    {
-        return $this->categorieId;
-    }
-
-    public function setCategorieId(?int $categorieId): self
-    {
-        $this->categorieId = $categorieId;
-        return $this;
-    }
-
     public function getCategorie(): ?Categorie
     {
         return $this->categorie;
@@ -164,9 +138,6 @@ class Produit
     public function setCategorie(?Categorie $categorie): self
     {
         $this->categorie = $categorie;
-        if ($categorie !== null && $categorie->getId() !== null) {
-            $this->categorieId = $categorie->getId();
-        }
         return $this;
     }
 

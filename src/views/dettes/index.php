@@ -60,8 +60,8 @@ require dirname(__DIR__) . '/layout/toast.php';
                             <tr id="debt-row-<?= $d->getId() ?>" data-client-name="<?= strtolower(htmlspecialchars(($d->getClient() ? $d->getClient()->getNomComplet() . ' ' . $d->getClient()->getTelephone() : '') . ' dt-' . $d->getId())) ?>" style="transition: all 0.2s;">
                                 <td style="font-weight: 700; color: var(--text-muted);">
                                     #DT-<?= $d->getId() ?>
-                                    <?php if ($d->getVenteId()): ?>
-                                        <span style="font-size: 10px; color: var(--text-muted); display: block; font-weight: normal; margin-top: 2px;">#CMD-<?= $d->getVenteId() ?></span>
+                                    <?php if ($d->getVente() && $d->getVente()->getId()): ?>
+                                        <span style="font-size: 10px; color: var(--text-muted); display: block; font-weight: normal; margin-top: 2px;">#CMD-<?= $d->getVente()->getId() ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td style="font-size: 12px;"><?= $d->getDateCreation()->format('d M Y H:i') ?></td>
@@ -130,7 +130,7 @@ require dirname(__DIR__) . '/layout/toast.php';
                                                 <?php if ($d->getVente() && !empty($d->getVente()->getLignes())): ?>
                                                     <?php foreach ($d->getVente()->getLignes() as $lv): ?>
                                                         <tr>
-                                                            <td><?= htmlspecialchars($lv->getProduit() ? $lv->getProduit()->getLibelle() : 'Article #' . $lv->getProduitId()) ?></td>
+                                                            <td><?= htmlspecialchars($lv->getProduit() ? $lv->getProduit()->getLibelle() : 'Article #' . ($lv->getProduit()?->getId() ?? '')) ?></td>
                                                             <td><?= $lv->getQuantite() ?></td>
                                                             <td><?= number_format($lv->getPrixUnitaire(), 0, ',', ' ') ?> F</td>
                                                             <td style="font-weight: 700; color: var(--accent);"><?= number_format($lv->getSousTotal(), 0, ',', ' ') ?> F</td>

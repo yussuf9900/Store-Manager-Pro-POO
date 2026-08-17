@@ -97,7 +97,7 @@ class AuthManager
         SessionManager::set('user_prenom', $user->getPrenom());
         SessionManager::set('user_email', $user->getEmail());
         SessionManager::set('user_role', $user->getRole() ? $user->getRole()->getCode() : '');
-        SessionManager::set('user_role_id', $user->getRoleId());
+        SessionManager::set('user_role_id', $user->getRole()?->getId() ?? 1);
         SessionManager::regenerateId(true);
     }
 

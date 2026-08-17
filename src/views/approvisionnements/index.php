@@ -90,7 +90,7 @@ require dirname(__DIR__) . '/layout/toast.php';
                                             <tbody>
                                                 <?php foreach ($app->getLignes() ?? [] as $ligne): ?>
                                                     <tr>
-                                                        <td><?= htmlspecialchars($ligne->getProduit() ? $ligne->getProduit()->getLibelle() : 'Produit #' . $ligne->getProduitId()) ?></td>
+                                                        <td><?= htmlspecialchars($ligne->getProduit() ? $ligne->getProduit()->getLibelle() : 'Produit #' . ($ligne->getProduit()?->getId() ?? '')) ?></td>
                                                         <td><?= $ligne->getQuantite() ?></td>
                                                         <td><?= number_format($ligne->getPrixAchatUnitaire(), 0, ',', ' ') ?> F</td>
                                                         <td style="font-weight: 700; color: var(--accent);"><?= number_format($ligne->getSousTotal(), 0, ',', ' ') ?> F</td>
@@ -122,7 +122,7 @@ require dirname(__DIR__) . '/layout/toast.php';
                                                         <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
                                                             <div>
                                                                 <div style="font-weight: 700; font-size: 13px; color: white;">
-                                                                    <?= htmlspecialchars($ligne->getProduit() ? $ligne->getProduit()->getLibelle() : 'Produit #' . $ligne->getProduitId()) ?>
+                                                                    <?= htmlspecialchars($ligne->getProduit() ? $ligne->getProduit()->getLibelle() : 'Produit #' . ($ligne->getProduit()?->getId() ?? '')) ?>
                                                                 </div>
                                                                 <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                                                                     Quantité théorique commandée : <strong style="color: var(--text-main);"><?= $ligne->getQuantite() ?></strong>
@@ -130,7 +130,7 @@ require dirname(__DIR__) . '/layout/toast.php';
                                                             </div>
                                                             <div style="display: flex; align-items: center; gap: 10px;">
                                                                 <label style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Qté Reçue :</label>
-                                                                <input type="number" name="quantites_livrees[<?= $ligne->getId() ?? $ligne->getProduitId() ?>]" class="form-control" value="<?= $ligne->getQuantite() ?>" min="0" required style="width: 100px; padding: 6px 10px; font-size: 13px; font-weight: 700; text-align: center; background: #0b0f1a;">
+                                                                <input type="number" name="quantites_livrees[<?= $ligne->getId() ?? $ligne->getProduit()?->getId() ?>]" class="form-control" value="<?= $ligne->getQuantite() ?>" min="0" required style="width: 100px; padding: 6px 10px; font-size: 13px; font-weight: 700; text-align: center; background: #0b0f1a;">
                                                             </div>
                                                         </div>
                                                     <?php endforeach; ?>

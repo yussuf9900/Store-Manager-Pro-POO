@@ -213,7 +213,7 @@ require dirname(__DIR__) . '/layout/toast.php';
                                             <tbody>
                                                 <?php foreach ($v->getLignes() as $ligne): ?>
                                                     <tr>
-                                                        <td><?= htmlspecialchars($ligne->getProduit() ? $ligne->getProduit()->getLibelle() : 'Article #' . $ligne->getProduitId()) ?></td>
+                                                        <td><?= htmlspecialchars($ligne->getProduit() ? $ligne->getProduit()->getLibelle() : 'Article #' . ($ligne->getProduit()?->getId() ?? '')) ?></td>
                                                         <td><?= $ligne->getQuantite() ?></td>
                                                         <td><?= number_format($ligne->getPrixUnitaire(), 0, ',', ' ') ?> F</td>
                                                         <td style="font-weight: 700; color: var(--accent);"><?= number_format($ligne->getSousTotal(), 0, ',', ' ') ?> F</td>

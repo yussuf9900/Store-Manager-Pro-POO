@@ -12,79 +12,73 @@ skinparam class {
 
 title **Diagramme de Classes POO — StoreManager Pro (ERP / POS)**
 
-class Role {
-    -id: int
+abstract class AbstractEntity {
+    #id: ?int
+    +getId(): ?int
+    +setId(?int id): self
+}
+
+class Role extends AbstractEntity {
     -code: string
     -libelle: string
     -description: ?string
-    +getId(): int
     +getCode(): string
     +getLibelle(): string
     +getDescription(): ?string
 }
 
-class StatutDette {
-    -id: int
+class StatutDette extends AbstractEntity {
     -code: string
     -libelle: string
-    +getId(): int
     +getCode(): string
     +getLibelle(): string
+    +isSoldee(): bool
+    +isNonSoldee(): bool
 }
 
-class ModePaiement {
-    -id: int
+class ModePaiement extends AbstractEntity {
     -code: string
     -libelle: string
     -estActif: bool
-    +getId(): int
     +getCode(): string
     +getLibelle(): string
     +isEstActif(): bool
 }
 
-class StatutAppro {
-    -id: int
+class StatutAppro extends AbstractEntity {
     -code: string
     -libelle: string
-    +getId(): int
     +getCode(): string
     +getLibelle(): string
 }
 
-class Categorie {
-    -id: int
+class Categorie extends AbstractEntity {
     -code: string
     -libelle: string
     -description: ?string
-    +getId(): int
     +getCode(): string
     +getLibelle(): string
     +getDescription(): ?string
 }
 
-class User {
-    -id: int
+class User extends AbstractEntity {
     -nom: string
     -prenom: string
     -email: string
     -motDePasse: string
-    -roleId: int
-    -role: Role
+    -role: ?Role
     -actif: bool
-    -dateCreation: DateTime
-    +getId(): int
+    -dateCreation: ?DateTime
     +getNomComplet(): string
     +getEmail(): string
-    +getRole(): Role
+    +getRole(): ?Role
     +hasRole(codeRole: string): bool
     +verifierMotDePasse(plainPassword: string): bool
     +setMotDePasse(plainPassword: string): void
     +isActif(): bool
 }
 
-class Produit {
-    -id: int
+class Produit extends AbstractEntity {
     -code: string
     -libelle: string
     -description: ?string
@@ -92,15 +86,15 @@ class Produit {
     -prixVente: float
     -qteStock: int
     -seuilAlerte: int
-    -categorieId: ?int
     -categorie: ?Categorie
-    +getId(): int
+    -dateCreation: ?DateTime
     +getCode(): string
     +getLibelle(): string
     +getPrixAchat(): float
     +getPrixVente(): float
     +getQteStock(): int
     +getSeuilAlerte(): int
+    +getCategorie(): ?Categorie
     +estEnAlerte(): bool
     +calculerMarge(): float
     +calculerTauxMarge(): float
@@ -108,8 +102,7 @@ class Produit {
     +retirerStock(quantite: int): bool
 }
 
-class Client {
-    -id: int
+class Client extends AbstractEntity {
     -nom: string
     -prenom: string
     -telephone: string
@@ -117,7 +110,7 @@ class Client {
     -adresse: ?string
     -limiteCredit: float
     -totalDettesActuelles: float
-    +getId(): int
+    -dateCreation: ?DateTime
     +getNomComplet(): string
     +getTelephone(): string
     +getEmail(): ?string
@@ -130,43 +123,38 @@ class Client {
     +diminuerDette(montant: float): void
 }
 
-class Fournisseur {
-    -id: int
+class Fournisseur extends AbstractEntity {
     -nom: string
-    -contactNom: string
+    -contactNom: ?string
     -telephone: string
     -email: ?string
     -adresse: ?string
-    +getId(): int
+    -dateCreation: ?DateTime
     +getNom(): string
-    +getContactNom(): string
+    +getContactNom(): ?string
     +getTelephone(): string
     +getEmail(): ?string
     +getAdresse(): ?string
 }
 
-class Vente {
-    -id: int
+class Vente extends AbstractEntity {
     -numeroFacture: string
     -dateVente: DateTime
     -montantTotal: float
     -montantPaye: float
     -montantRestant: float
-    -modePaiementId: int
-    -modePaiement: ModePaiement
+    -modePaiement: ?ModePaiement
     -statut: string
-    -clientId: ?int
     -client: ?Client
-    -userId: int
     -vendeur: ?User
     -lignes: LigneVente[*]
-    +getId(): int
+    -dateCreation: ?DateTime
     +getNumeroFacture(): string
     +getDateVente(): DateTime
     +getMontantTotal(): float
     +getMontantPaye(): float
     +getMontantRestant(): float
-    +getModePaiement(): ModePaiement
+    +getModePaiement(): ?ModePaiement
     +getClient(): ?Client
     +getVendeur(): ?User
     +getLignes(): LigneVente[*]
@@ -175,16 +163,17 @@ class Vente {
     +estACredit(): bool
 }
 
-class LigneVente {
-    -id: int
-    -venteId: int
-    -produitId: int
+class Commande extends Vente {
+}
+
+class LigneVente extends AbstractEntity {
+    -vente: ?Vente
     -produit: ?Produit
     -quantite: int
     -prixUnitaire: float
     -remise: float
-    +getId(): int
-    +getProduitId(): int
+    -sousTotal: float
+    +getVente(): ?Vente
     +getProduit(): ?Produit
     +getQuantite(): int
     +getPrixUnitaire(): float
@@ -192,91 +181,77 @@ class LigneVente {
     +calculerSousTotal(): float
 }
 
-class Dette {
-    -id: int
-    -venteId: int
+class Dette extends AbstractEntity {
     -vente: ?Vente
-    -clientId: int
     -client: ?Client
     -montantTotal: float
     -montantRestant: float
     -dateCreation: DateTime
     -dateEcheance: ?DateTime
-    -statutId: int
-    -statut: StatutDette
+    -statut: ?StatutDette
     -paiements: Paiement[*]
-    +getId(): int
-    +getVenteId(): int
-    +getClientId(): int
+    +getVente(): ?Vente
     +getClient(): ?Client
     +getMontantTotal(): float
     +getMontantRestant(): float
     +getDateCreation(): DateTime
     +getDateEcheance(): ?DateTime
-    +getStatut(): StatutDette
+    +getStatut(): ?StatutDette
     +getPaiements(): Paiement[*]
     +enregistrerPaiement(paiement: Paiement): void
     +estSoldee(): bool
     +estEnRetard(): bool
 }
 
-class Paiement {
-    -id: int
-    -detteId: int
+class Paiement extends AbstractEntity {
     -dette: ?Dette
     -montant: float
     -datePaiement: DateTime
-    -modePaiementId: int
-    -modePaiement: ModePaiement
+    -modePaiement: ?ModePaiement
     -referencePaiement: ?string
-    -userId: int
     -agent: ?User
-    +getId(): int
-    +getDetteId(): int
+    -dateCreation: ?DateTime
+    +getDette(): ?Dette
     +getMontant(): float
     +getDatePaiement(): DateTime
-    +getModePaiement(): ModePaiement
+    +getModePaiement(): ?ModePaiement
     +getReferencePaiement(): ?string
-    +getUserId(): int
     +getAgent(): ?User
 }
 
-class Approvisionnement {
-    -id: int
+class Approvisionnement extends AbstractEntity {
     -numeroBL: string
     -dateAppro: DateTime
     -montantTotal: float
-    -statutId: int
-    -statut: StatutAppro
-    -fournisseurId: int
+    -statut: ?StatutAppro
     -fournisseur: ?Fournisseur
-    -userId: int
     -agentStock: ?User
     -lignes: LigneApprovisionnement[*]
-    +getId(): int
+    -dateCreation: ?DateTime
     +getNumeroBL(): string
     +getDateAppro(): DateTime
     +getMontantTotal(): float
-    +getStatut(): StatutAppro
+    +getStatut(): ?StatutAppro
     +getFournisseur(): ?Fournisseur
+    +getAgentStock(): ?User
     +getLignes(): LigneApprovisionnement[*]
     +ajouterLigne(ligne: LigneApprovisionnement): void
     +calculerTotal(): float
+    +isRecu(): bool
+    +isAnnule(): bool
 }
 
-class LigneApprovisionnement {
-    -id: int
-    -approvisionnementId: int
-    -produitId: int
+class LigneApprovisionnement extends AbstractEntity {
+    -approvisionnement: ?Approvisionnement
     -produit: ?Produit
     -quantite: int
     -prixAchatUnitaire: float
-    +getId(): int
-    +getProduitId(): int
+    -sousTotal: float
+    +getApprovisionnement(): ?Approvisionnement
     +getProduit(): ?Produit
     +getQuantite(): int
     +getPrixAchatUnitaire(): float
-    +calculerSousTotal(): float
+    +getSousTotal(): float
 }
 
 User "1" --> "1" Role : possede
@@ -295,6 +270,7 @@ LigneVente "0..*" --> "1" Produit : reference
 Vente "1" --> "0..1" Dette : genere
 Dette "1" *-- "0..*" Paiement : reglee par
 Dette "1" --> "1" StatutDette : possede statut
+Dette "1" --> "1" Client : debiteur
 
 Fournisseur "1" --> "0..*" Approvisionnement : approvisionne
 Approvisionnement "1" *-- "1..*" LigneApprovisionnement : compose de

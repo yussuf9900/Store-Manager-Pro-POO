@@ -75,6 +75,8 @@ class UserRepository extends AbstractRepository
 
     public function save(User $user): bool
     {
+        $roleId = $user->getRole()?->getId() ?? 1;
+
         if ($user->getId() === null) {
             $stmt = $this->pdo->prepare(
                 "INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role_id, actif, created_at)
@@ -84,7 +86,7 @@ class UserRepository extends AbstractRepository
             $stmt->bindValue(':prenom', $user->getPrenom(), PDO::PARAM_STR);
             $stmt->bindValue(':email', $user->getEmail(), PDO::PARAM_STR);
             $stmt->bindValue(':mot_de_passe', $user->getMotDePasse(), PDO::PARAM_STR);
-            $stmt->bindValue(':role_id', $user->getRoleId(), PDO::PARAM_INT);
+            $stmt->bindValue(':role_id', $roleId, PDO::PARAM_INT);
             $stmt->bindValue(':actif', $user->isActif(), PDO::PARAM_BOOL);
             $stmt->bindValue(':created_at', $user->getDateCreation() ? $user->getDateCreation()->format('Y-m-d H:i:s') : date('Y-m-d H:i:s'), PDO::PARAM_STR);
 
@@ -109,7 +111,7 @@ class UserRepository extends AbstractRepository
         $stmt->bindValue(':prenom', $user->getPrenom(), PDO::PARAM_STR);
         $stmt->bindValue(':email', $user->getEmail(), PDO::PARAM_STR);
         $stmt->bindValue(':mot_de_passe', $user->getMotDePasse(), PDO::PARAM_STR);
-        $stmt->bindValue(':role_id', $user->getRoleId(), PDO::PARAM_INT);
+        $stmt->bindValue(':role_id', $roleId, PDO::PARAM_INT);
         $stmt->bindValue(':actif', $user->isActif(), PDO::PARAM_BOOL);
         $stmt->bindValue(':id', $user->getId(), PDO::PARAM_INT);
 
@@ -150,7 +152,6 @@ class UserRepository extends AbstractRepository
             prenom: $row['prenom'] ?? '',
             email: $row['email'] ?? '',
             motDePasse: $row['mot_de_passe'] ?? '',
-            roleId: isset($row['role_id']) ? (int)$row['role_id'] : 0,
             role: $role,
             actif: $actif,
             dateCreation: $dateCreation

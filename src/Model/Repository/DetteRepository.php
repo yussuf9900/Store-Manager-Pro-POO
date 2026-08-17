@@ -6,6 +6,8 @@ use App\Model\Entity\Client;
 use App\Model\Entity\Dette;
 use App\Model\Entity\ModePaiement;
 use App\Model\Entity\Paiement;
+use App\Model\Entity\Produit;
+use App\Model\Entity\LigneVente;
 use App\Model\Entity\StatutDette;
 use App\Model\Entity\User;
 use App\Model\Entity\Vente;
@@ -101,14 +103,37 @@ class DetteRepository extends AbstractRepository
              LEFT JOIN clients c ON d.client_id = c.id
              LEFT JOIN statuts_dette s ON d.statut_id = s.id
              LEFT JOIN ventes v ON d.vente_id = v.id
-             WHERE d.client_id = :client_id
+             WHERE d.client_id = :cid
              ORDER BY d.date_creation DESC, d.id DESC"
         );
-        $stmt->bindValue(':client_id', $clientId, PDO::PARAM_INT);
+        $stmt->bindValue(':cid', $clientId, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
         return array_map([$this, 'hydrate'], $rows);
+    }
+
+    public function findByVenteId(int $venteId): ?Dette
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT d.*, 
+                    c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone, 
+                    c.email AS client_email, c.adresse AS client_adresse, c.limite_credit AS client_limite_credit, 
+                    c.total_dettes_actuelles AS client_total_dettes,
+                    s.code AS statut_code, s.libelle AS statut_libelle,
+                    v.numero_facture AS vente_numero_facture
+             FROM dettes d
+             LEFT JOIN clients c ON d.client_id = c.id
+             LEFT JOIN statuts_dette s ON d.statut_id = s.id
+             LEFT JOIN ventes v ON d.vente_id = v.id
+             WHERE d.vente_id = :vid
+             LIMIT 1"
+        );
+        $stmt->bindValue(':vid', $venteId, PDO::PARAM_INT);
+        $stmt->execute();
+        $row = $stmt->fetch();
+
+        return $row ? $this->hydrate($row) : null;
     }
 
     public function findByStatut(int $statutId): array
@@ -124,10 +149,10 @@ class DetteRepository extends AbstractRepository
              LEFT JOIN clients c ON d.client_id = c.id
              LEFT JOIN statuts_dette s ON d.statut_id = s.id
              LEFT JOIN ventes v ON d.vente_id = v.id
-             WHERE d.statut_id = :statut_id
+             WHERE d.statut_id = :sid
              ORDER BY d.date_creation DESC, d.id DESC"
         );
-        $stmt->bindValue(':statut_id', $statutId, PDO::PARAM_INT);
+        $stmt->bindValue(':sid', $statutId, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
@@ -158,13 +183,17 @@ class DetteRepository extends AbstractRepository
 
     public function save(Dette $dette): bool
     {
+        $venteId = $dette->getVente()?->getId();
+        $clientId = $dette->getClient()?->getId() ?? 0;
+        $statutId = $dette->getStatut()?->getId() ?? 1;
+
         if ($dette->getId() === null) {
             $stmt = $this->pdo->prepare(
                 "INSERT INTO dettes (vente_id, client_id, montant_total, montant_restant, date_creation, date_echeance, statut_id)
                  VALUES (:vente_id, :client_id, :montant_total, :montant_restant, :date_creation, :date_echeance, :statut_id)"
             );
-            $stmt->bindValue(':vente_id', $dette->getVenteId(), $dette->getVenteId() ? PDO::PARAM_INT : PDO::PARAM_NULL);
-            $stmt->bindValue(':client_id', $dette->getClientId(), PDO::PARAM_INT);
+            $stmt->bindValue(':vente_id', $venteId, $venteId ? PDO::PARAM_INT : PDO::PARAM_NULL);
+            $stmt->bindValue(':client_id', $clientId, PDO::PARAM_INT);
             $stmt->bindValue(':montant_total', $dette->getMontantTotal());
             $stmt->bindValue(':montant_restant', $dette->getMontantRestant());
             $stmt->bindValue(':date_creation', $dette->getDateCreation()->format('Y-m-d H:i:s'), PDO::PARAM_STR);
@@ -173,7 +202,7 @@ class DetteRepository extends AbstractRepository
                 $dette->getDateEcheance() ? $dette->getDateEcheance()->format('Y-m-d H:i:s') : null, 
                 $dette->getDateEcheance() ? PDO::PARAM_STR : PDO::PARAM_NULL
             );
-            $stmt->bindValue(':statut_id', $dette->getStatutId(), PDO::PARAM_INT);
+            $stmt->bindValue(':statut_id', $statutId, PDO::PARAM_INT);
 
             $result = $stmt->execute();
             if ($result) {
@@ -193,8 +222,8 @@ class DetteRepository extends AbstractRepository
                 statut_id = :statut_id
              WHERE id = :id"
         );
-        $stmt->bindValue(':vente_id', $dette->getVenteId(), $dette->getVenteId() ? PDO::PARAM_INT : PDO::PARAM_NULL);
-        $stmt->bindValue(':client_id', $dette->getClientId(), PDO::PARAM_INT);
+        $stmt->bindValue(':vente_id', $venteId, $venteId ? PDO::PARAM_INT : PDO::PARAM_NULL);
+        $stmt->bindValue(':client_id', $clientId, PDO::PARAM_INT);
         $stmt->bindValue(':montant_total', $dette->getMontantTotal());
         $stmt->bindValue(':montant_restant', $dette->getMontantRestant());
         $stmt->bindValue(':date_creation', $dette->getDateCreation()->format('Y-m-d H:i:s'), PDO::PARAM_STR);
@@ -203,7 +232,7 @@ class DetteRepository extends AbstractRepository
             $dette->getDateEcheance() ? $dette->getDateEcheance()->format('Y-m-d H:i:s') : null, 
             $dette->getDateEcheance() ? PDO::PARAM_STR : PDO::PARAM_NULL
         );
-        $stmt->bindValue(':statut_id', $dette->getStatutId(), PDO::PARAM_INT);
+        $stmt->bindValue(':statut_id', $statutId, PDO::PARAM_INT);
         $stmt->bindValue(':id', $dette->getId(), PDO::PARAM_INT);
 
         return $stmt->execute();
@@ -244,16 +273,20 @@ class DetteRepository extends AbstractRepository
 
     public function savePaiement(Paiement $paiement): bool
     {
+        $detteId = $paiement->getDette()?->getId() ?? 0;
+        $modePaiementId = $paiement->getModePaiement()?->getId() ?? 1;
+        $userId = $paiement->getAgent()?->getId() ?? 1;
+
         $stmt = $this->pdo->prepare(
             "INSERT INTO paiements (dette_id, montant, date_paiement, mode_paiement_id, reference_paiement, user_id)
              VALUES (:dette_id, :montant, :date_paiement, :mode_paiement_id, :reference_paiement, :user_id)"
         );
-        $stmt->bindValue(':dette_id', $paiement->getDetteId(), PDO::PARAM_INT);
+        $stmt->bindValue(':dette_id', $detteId, PDO::PARAM_INT);
         $stmt->bindValue(':montant', $paiement->getMontant());
         $stmt->bindValue(':date_paiement', $paiement->getDatePaiement()->format('Y-m-d H:i:s'), PDO::PARAM_STR);
-        $stmt->bindValue(':mode_paiement_id', $paiement->getModePaiementId(), PDO::PARAM_INT);
+        $stmt->bindValue(':mode_paiement_id', $modePaiementId, PDO::PARAM_INT);
         $stmt->bindValue(':reference_paiement', $paiement->getReferencePaiement(), PDO::PARAM_STR);
-        $stmt->bindValue(':user_id', $paiement->getUserId(), PDO::PARAM_INT);
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
 
         $result = $stmt->execute();
         if ($result) {
@@ -323,7 +356,7 @@ class DetteRepository extends AbstractRepository
         foreach ($rows as $row) {
             $produit = null;
             if (!empty($row['produit_id'])) {
-                $produit = new \App\Model\Entity\Produit(
+                $produit = new Produit(
                     id: (int)$row['produit_id'],
                     code: $row['produit_code'] ?? '',
                     libelle: $row['produit_libelle'] ?? '',
@@ -331,10 +364,9 @@ class DetteRepository extends AbstractRepository
                 );
             }
 
-            $lignes[] = new \App\Model\Entity\LigneVente(
+            $lignes[] = new LigneVente(
                 id: (int)$row['id'],
-                venteId: (int)$row['vente_id'],
-                produitId: (int)$row['produit_id'],
+                vente: new Vente(id: (int)$row['vente_id']),
                 produit: $produit,
                 quantite: (int)$row['quantite'],
                 prixUnitaire: (float)$row['prix_unitaire'],
@@ -361,8 +393,8 @@ class DetteRepository extends AbstractRepository
             }
         }
 
-        if ($dette->getVenteId() !== null && $dette->getVente() !== null) {
-            $lignes = $this->findLignesVenteByVenteId($dette->getVenteId());
+        if ($dette->getVente() !== null && $dette->getVente()->getId() !== null) {
+            $lignes = $this->findLignesVenteByVenteId($dette->getVente()->getId());
             foreach ($lignes as $ligne) {
                 $dette->getVente()->ajouterLigne($ligne);
             }
@@ -409,15 +441,12 @@ class DetteRepository extends AbstractRepository
 
         return new Dette(
             id: isset($row['id']) ? (int)$row['id'] : null,
-            venteId: isset($row['vente_id']) ? (int)$row['vente_id'] : null,
             vente: $vente,
-            clientId: isset($row['client_id']) ? (int)$row['client_id'] : 0,
             client: $client,
             montantTotal: isset($row['montant_total']) ? (float)$row['montant_total'] : 0.0,
             montantRestant: isset($row['montant_restant']) ? (float)$row['montant_restant'] : 0.0,
             dateCreation: $dateCreation,
             dateEcheance: $dateEcheance,
-            statutId: isset($row['statut_id']) ? (int)$row['statut_id'] : 1,
             statut: $statut
         );
     }
@@ -444,17 +473,20 @@ class DetteRepository extends AbstractRepository
             );
         }
 
+        $dette = null;
+        if (!empty($row['dette_id'])) {
+            $dette = new Dette(id: (int)$row['dette_id']);
+        }
+
         $datePaiement = !empty($row['date_paiement']) ? new DateTime($row['date_paiement']) : new DateTime();
 
         return new Paiement(
             id: isset($row['id']) ? (int)$row['id'] : null,
-            detteId: isset($row['dette_id']) ? (int)$row['dette_id'] : 0,
+            dette: $dette,
             montant: isset($row['montant']) ? (float)$row['montant'] : 0.0,
             datePaiement: $datePaiement,
-            modePaiementId: isset($row['mode_paiement_id']) ? (int)$row['mode_paiement_id'] : 1,
             modePaiement: $mode,
             referencePaiement: $row['reference_paiement'] ?? null,
-            userId: isset($row['user_id']) ? (int)$row['user_id'] : 1,
             agent: $agent
         );
     }

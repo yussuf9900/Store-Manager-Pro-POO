@@ -5,9 +5,8 @@ namespace App\Model\Entity;
 use DateTime;
 use InvalidArgumentException;
 
-class Client
+class Client extends AbstractEntity
 {
-    private ?int $id;
     private string $nom;
     private string $prenom;
     private string $telephone;
@@ -28,7 +27,7 @@ class Client
         float $totalDettesActuelles = 0.0,
         ?DateTime $dateCreation = null
     ) {
-        $this->id = $id;
+        parent::__construct($id);
         $this->nom = trim($nom);
         $this->prenom = trim($prenom);
         $this->telephone = trim($telephone);
@@ -37,17 +36,6 @@ class Client
         $this->limiteCredit = max(0.0, $limiteCredit);
         $this->totalDettesActuelles = max(0.0, $totalDettesActuelles);
         $this->dateCreation = $dateCreation ?? new DateTime();
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-        return $this;
     }
 
     public function getNom(): string
