@@ -6,89 +6,74 @@ use App\Core\Database;
 use App\Core\SessionManager;
 use App\Model\Entity\User;
 use App\Model\Repository\UserRepository;
-use InvalidArgumentException;
 use PDO;
-use RuntimeException;
 
 class AuthManager
 {
-    private PDO $pdo;
-    private UserRepository $userRepository;
-
-    public function __construct(?UserRepository $userRepository = null, ?PDO $pdo = null)
+    public static function authenticate(string $email, string $motDePasse): ?User
     {
-        $this->pdo = $pdo ?? Database::getPDO();
-        $this->userRepository = $userRepository ?? new UserRepository($this->pdo);
-    }
-
-    public function authenticate(string $email, string $password): ?User
-    {
-        $cleanEmail = trim($email);
-        if (empty($cleanEmail)) {
-            throw new InvalidArgumentException("L'adresse email est requise.");
-        }
-
-        if (empty($password)) {
-            throw new InvalidArgumentException("Le mot de passe est requis.");
-        }
-
-        $user = $this->userRepository->findByEmail($cleanEmail);
+        $user = UserRepository::findByEmail($email);
         if (!$user) {
             return null;
         }
 
         if (!$user->isActif()) {
-            throw new RuntimeException("Ce compte utilisateur est désactivé.");
-        }
-
-        $passwordValid = $user->verifierMotDePasse($password);
-        if (!$passwordValid && ($password === 'demo1234' || $password === 'password123')) {
-            $passwordValid = true;
-            $user->setMotDePasse($password);
-            $this->userRepository->save($user);
-        }
-
-        if (!$passwordValid) {
             return null;
         }
 
-        $this->loginUser($user);
-
-        return $user;
-    }
-
-    public function authenticateQuickProfile(string $roleCode): ?User
-    {
-        $cleanCode = strtoupper(trim($roleCode));
-        $user = $this->userRepository->findByRoleCode($cleanCode);
-
-        if (!$user) {
-            $emailMap = [
-                'ADMIN' => 'admin@storemanager.pro',
-                'VENTE' => 'vente@storemanager.pro',
-                'STOCK' => 'stock@storemanager.pro',
-                'INVENTAIRE' => 'inventaire@storemanager.pro'
-            ];
-
-            if (isset($emailMap[$cleanCode])) {
-                $user = $this->userRepository->findByEmail($emailMap[$cleanCode]);
+        if (!$user->verifierMotDePasse($motDePasse)) {
+            $rawHash = $user->getMotDePasse();
+            if ($rawHash === $motDePasse || $rawHash === hash('sha256', $motDePasse) || $motDePasse === 'demo1234') {
+                $user->setMotDePasse($motDePasse);
+                UserRepository::save($user);
+            } else {
+                return null;
             }
         }
 
-        if (!$user) {
-            throw new InvalidArgumentException("Profil de démonstration introuvable pour le rôle : " . $roleCode);
-        }
-
-        if (!$user->isActif()) {
-            throw new RuntimeException("Ce compte de démonstration est désactivé.");
-        }
-
-        $this->loginUser($user);
-
+        self::loginUser($user);
         return $user;
     }
 
-    public function loginUser(User $user): void
+    public static function authenticateQuickProfile(string $roleCode): ?User
+    {
+        $code = strtoupper(trim($roleCode));
+
+        $emailMap = [
+            'ADMIN' => 'admin@storemanager.sn',
+            'VENTE' => 'vente@storemanager.sn',
+            'STOCK' => 'stock@storemanager.sn',
+            'INVENTAIRE' => 'inventaire@storemanager.sn'
+        ];
+
+        $user = null;
+        if (isset($emailMap[$code])) {
+            $user = UserRepository::findByEmail($emailMap[$code]);
+        }
+
+        if (!$user) {
+            $user = UserRepository::findByRoleCode($code);
+        }
+
+        if (!$user) {
+            $all = UserRepository::findAll();
+            foreach ($all as $u) {
+                if ($u->getRole() && strtoupper($u->getRole()->getCode()) === $code) {
+                    $user = $u;
+                    break;
+                }
+            }
+        }
+
+        if ($user) {
+            self::loginUser($user);
+            return $user;
+        }
+
+        return null;
+    }
+
+    public static function loginUser(User $user): void
     {
         SessionManager::start();
         SessionManager::setUser($user);
@@ -101,12 +86,12 @@ class AuthManager
         SessionManager::regenerateId(true);
     }
 
-    public function logout(): void
+    public static function logout(): void
     {
         SessionManager::logout();
     }
 
-    public function getCurrentUser(): ?User
+    public static function getCurrentUser(): ?User
     {
         $user = SessionManager::getUser();
         if ($user instanceof User) {
@@ -115,7 +100,7 @@ class AuthManager
 
         $userId = SessionManager::get('user_id');
         if ($userId) {
-            $user = $this->userRepository->findById((int)$userId);
+            $user = UserRepository::findById((int)$userId);
             if ($user) {
                 SessionManager::setUser($user);
                 return $user;
@@ -125,76 +110,68 @@ class AuthManager
         return null;
     }
 
-    public function isAuthenticated(): bool
+    public static function isAuthenticated(): bool
     {
-        return $this->getCurrentUser() !== null;
+        return SessionManager::isLoggedIn() && self::getCurrentUser() !== null;
     }
 
-    public function hasRole(string|array $roles): bool
+    public static function hasRole(string|array $roles): bool
     {
-        $user = $this->getCurrentUser();
-        if (!$user) {
+        $user = self::getCurrentUser();
+        if (!$user || !$user->getRole()) {
             return false;
         }
 
-        $userRole = $user->getRole() ? strtoupper($user->getRole()->getCode()) : '';
+        $currentCode = strtoupper($user->getRole()->getCode());
 
-        if ($userRole === 'ADMIN') {
+        if ($currentCode === 'ADMIN') {
             return true;
         }
 
-        if (is_array($roles)) {
-            foreach ($roles as $r) {
-                if ($userRole === strtoupper(trim($r))) {
-                    return true;
-                }
-            }
-            return false;
+        if (is_string($roles)) {
+            return $currentCode === strtoupper(trim($roles));
         }
 
-        return $userRole === strtoupper(trim($roles));
+        if (is_array($roles)) {
+            $upperRoles = array_map('strtoupper', $roles);
+            return in_array($currentCode, $upperRoles, true);
+        }
+
+        return false;
     }
 
-    public function checkAccess(string|array $roles): bool
+    public static function requireRole(string|array $roles, ?string $redirectUrl = null): void
     {
-        return $this->hasRole($roles);
-    }
-
-    public function requireRole(string|array $roles): User
-    {
-        $user = $this->getCurrentUser();
-        if (!$user) {
-            SessionManager::setFlash('error', "Veuillez vous connecter pour accéder à cette section.");
+        if (!self::isAuthenticated()) {
+            SessionManager::setFlash('error', 'Vous devez vous connecter pour accéder à cette page.');
             if (!headers_sent()) {
                 header('Location: /login');
                 exit;
             }
-            throw new RuntimeException("Authentification requise.");
+            throw new \Exception("Accès non autorisé : authentification requise.");
         }
 
-        if (!$this->hasRole($roles)) {
-            SessionManager::setFlash('error', "Accès refusé : vous n'avez pas l'habilitation nécessaire pour accéder à cette page.");
-            $defaultRoute = $this->getDefaultRouteForUser($user);
+        if (!self::hasRole($roles)) {
+            SessionManager::setFlash('error', 'Accès interdit : privilèges insuffisants pour cette action.');
+            $fallback = $redirectUrl ?? self::getDefaultRouteForUser();
             if (!headers_sent()) {
-                header('Location: ' . $defaultRoute);
+                header("Location: {$fallback}");
                 exit;
             }
-            throw new RuntimeException("Accès refusé : habilitation insuffisante.");
+            throw new \Exception("Accès interdit : rôle insuffisant.");
         }
-
-        return $user;
     }
 
-    public function getDefaultRouteForUser(?User $user = null): string
+    public static function getDefaultRouteForUser(?User $user = null): string
     {
-        $u = $user ?? $this->getCurrentUser();
-        if (!$u) {
+        $targetUser = $user ?? self::getCurrentUser();
+        if (!$targetUser || !$targetUser->getRole()) {
             return '/login';
         }
 
-        $roleCode = $u->getRole() ? strtoupper($u->getRole()->getCode()) : '';
+        $code = strtoupper($targetUser->getRole()->getCode());
 
-        return match ($roleCode) {
+        return match ($code) {
             'ADMIN' => '/dashboard',
             'VENTE' => '/pos',
             'STOCK' => '/supplies',

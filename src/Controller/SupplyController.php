@@ -11,21 +11,7 @@ use Throwable;
 
 class SupplyController
 {
-    private SupplyService $supplyService;
-    private FournisseurRepository $fournisseurRepository;
-    private ProduitRepository $produitRepository;
-
-    public function __construct(
-        ?SupplyService $supplyService = null,
-        ?FournisseurRepository $fournisseurRepository = null,
-        ?ProduitRepository $produitRepository = null
-    ) {
-        $this->supplyService = $supplyService ?? new SupplyService();
-        $this->fournisseurRepository = $fournisseurRepository ?? new FournisseurRepository();
-        $this->produitRepository = $produitRepository ?? new ProduitRepository();
-    }
-
-    public function index(): void
+    public static function index(): void
     {
         $currentUser = SessionManager::getUser();
         if (!$currentUser && SessionManager::isLoggedIn()) {
@@ -37,17 +23,17 @@ class SupplyController
             );
         }
 
-        $approvisionnements = $this->supplyService->getAllApprovisionnements();
-        $stats = $this->supplyService->getStatistiquesAppro();
-        $fournisseurs = $this->fournisseurRepository->findAll();
-        $produits = $this->produitRepository->findAll();
+        $approvisionnements = SupplyService::getAllApprovisionnements();
+        $stats = SupplyService::getStatistiquesAppro();
+        $fournisseurs = FournisseurRepository::findAll();
+        $produits = ProduitRepository::findAll();
 
         $totalCoutEntrees = $stats['total_cout_entrees'];
 
         require dirname(__DIR__) . '/views/approvisionnements/index.php';
     }
 
-    public function receptionner(): void
+    public static function receptionner(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             if (!headers_sent()) {
@@ -63,7 +49,7 @@ class SupplyController
         $userId = (int)SessionManager::get('user_id', 1);
 
         try {
-            $result = $this->supplyService->receptionnerBL($approId, $quantitesLivrees, $userId);
+            $result = SupplyService::receptionnerBL($approId, $quantitesLivrees, $userId);
             SessionManager::setFlash('success', $result['message']);
         } catch (Throwable $e) {
             SessionManager::setFlash('error', $e->getMessage());
@@ -74,7 +60,7 @@ class SupplyController
         }
     }
 
-    public function creer(): void
+    public static function creer(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             if (!headers_sent()) {
@@ -90,7 +76,7 @@ class SupplyController
         $userId = (int)SessionManager::get('user_id', 1);
 
         try {
-            $appro = $this->supplyService->creerApprovisionnement(
+            $appro = SupplyService::creerApprovisionnement(
                 $fournisseurId,
                 $articles,
                 $userId,

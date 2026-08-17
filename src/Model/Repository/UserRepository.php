@@ -9,25 +9,25 @@ use PDO;
 
 class UserRepository extends AbstractRepository
 {
-    private string $baseSelect = "SELECT u.*, 
+    private static string $baseSelect = "SELECT u.*, 
             r.id AS role_id_ref, r.code AS role_code, r.libelle AS role_libelle, r.description AS role_description 
         FROM utilisateurs u 
         LEFT JOIN roles r ON u.role_id = r.id";
 
-    public function findById(int $id): ?User
+    public static function findById(int $id): ?User
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE u.id = :id LIMIT 1");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE u.id = :id LIMIT 1");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findByEmail(string $email): ?User
+    public static function findByEmail(string $email): ?User
     {
         $cleanEmail = strtolower(trim($email));
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE LOWER(u.email) = :email LIMIT 1");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE LOWER(u.email) = :email LIMIT 1");
         $stmt->bindValue(':email', $cleanEmail, PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
@@ -36,49 +36,50 @@ class UserRepository extends AbstractRepository
             $altDomain = str_ends_with($cleanEmail, '@storemanager.sn') 
                 ? str_replace('@storemanager.sn', '@storemanager.pro', $cleanEmail)
                 : str_replace('@storemanager.pro', '@storemanager.sn', $cleanEmail);
-            $stmtAlt = $this->pdo->prepare("{$this->baseSelect} WHERE LOWER(u.email) = :email LIMIT 1");
+            $stmtAlt = self::getPDO()->prepare(self::$baseSelect . " WHERE LOWER(u.email) = :email LIMIT 1");
             $stmtAlt->bindValue(':email', $altDomain, PDO::PARAM_STR);
             $stmtAlt->execute();
             $row = $stmtAlt->fetch();
         }
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findByRole(int $roleId): array
+    public static function findByRole(int $roleId): array
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE u.role_id = :role_id ORDER BY u.nom ASC, u.prenom ASC");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE u.role_id = :role_id ORDER BY u.nom ASC, u.prenom ASC");
         $stmt->bindValue(':role_id', $roleId, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function findByRoleCode(string $code): ?User
+    public static function findByRoleCode(string $code): ?User
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE UPPER(r.code) = :code AND u.actif = true ORDER BY u.id ASC LIMIT 1");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE UPPER(r.code) = :code AND u.actif = true ORDER BY u.id ASC LIMIT 1");
         $stmt->bindValue(':code', strtoupper(trim($code)), PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findAll(): array
+    public static function findAll(): array
     {
-        $stmt = $this->pdo->query("{$this->baseSelect} ORDER BY u.nom ASC, u.prenom ASC");
+        $stmt = self::getPDO()->query(self::$baseSelect . " ORDER BY u.nom ASC, u.prenom ASC");
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function save(User $user): bool
+    public static function save(User $user): bool
     {
+        $pdo = self::getPDO();
         $roleId = $user->getRole()?->getId() ?? 1;
 
         if ($user->getId() === null) {
-            $stmt = $this->pdo->prepare(
+            $stmt = $pdo->prepare(
                 "INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role_id, actif, created_at)
                  VALUES (:nom, :prenom, :email, :mot_de_passe, :role_id, :actif, :created_at)"
             );
@@ -92,12 +93,12 @@ class UserRepository extends AbstractRepository
 
             $result = $stmt->execute();
             if ($result) {
-                $user->setId((int)$this->pdo->lastInsertId());
+                $user->setId((int)$pdo->lastInsertId());
             }
             return $result;
         }
 
-        $stmt = $this->pdo->prepare(
+        $stmt = $pdo->prepare(
             "UPDATE utilisateurs SET
                 nom = :nom,
                 prenom = :prenom,
@@ -118,20 +119,20 @@ class UserRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function delete(int $id): bool
+    public static function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM utilisateurs WHERE id = :id");
+        $stmt = self::getPDO()->prepare("DELETE FROM utilisateurs WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function count(): int
+    public static function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM utilisateurs");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM utilisateurs");
         return (int)$stmt->fetchColumn();
     }
 
-    protected function hydrate(array $row): User
+    protected static function hydrate(array $row): User
     {
         $role = null;
         if (!empty($row['role_id']) || !empty($row['role_code'])) {

@@ -16,9 +16,9 @@ use PDO;
 
 class DetteRepository extends AbstractRepository
 {
-    public function findById(int $id): ?Dette
+    public static function findById(int $id): ?Dette
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT d.*, 
                     c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone, 
                     c.email AS client_email, c.adresse AS client_adresse, c.limite_credit AS client_limite_credit, 
@@ -40,15 +40,15 @@ class DetteRepository extends AbstractRepository
             return null;
         }
 
-        $dette = $this->hydrate($row);
-        $dette = $this->attachDetails($dette);
+        $dette = self::hydrate($row);
+        $dette = self::attachDetails($dette);
 
         return $dette;
     }
 
-    public function findAll(): array
+    public static function findAll(): array
     {
-        $stmt = $this->pdo->query(
+        $stmt = self::getPDO()->query(
             "SELECT d.*, 
                     c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone, 
                     c.email AS client_email, c.adresse AS client_adresse, c.limite_credit AS client_limite_credit, 
@@ -64,14 +64,14 @@ class DetteRepository extends AbstractRepository
         $rows = $stmt->fetchAll();
 
         return array_map(function ($row) {
-            $dette = $this->hydrate($row);
-            return $this->attachDetails($dette);
+            $dette = self::hydrate($row);
+            return self::attachDetails($dette);
         }, $rows);
     }
 
-    public function findDettesActives(): array
+    public static function findDettesActives(): array
     {
-        $stmt = $this->pdo->query(
+        $stmt = self::getPDO()->query(
             "SELECT d.*, 
                     c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone, 
                     c.email AS client_email, c.adresse AS client_adresse, c.limite_credit AS client_limite_credit, 
@@ -87,12 +87,12 @@ class DetteRepository extends AbstractRepository
         );
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function findByClient(int $clientId): array
+    public static function findByClient(int $clientId): array
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT d.*, 
                     c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone, 
                     c.email AS client_email, c.adresse AS client_adresse, c.limite_credit AS client_limite_credit, 
@@ -110,12 +110,12 @@ class DetteRepository extends AbstractRepository
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function findByVenteId(int $venteId): ?Dette
+    public static function findByVenteId(int $venteId): ?Dette
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT d.*, 
                     c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone, 
                     c.email AS client_email, c.adresse AS client_adresse, c.limite_credit AS client_limite_credit, 
@@ -133,12 +133,12 @@ class DetteRepository extends AbstractRepository
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findByStatut(int $statutId): array
+    public static function findByStatut(int $statutId): array
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT d.*, 
                     c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone, 
                     c.email AS client_email, c.adresse AS client_adresse, c.limite_credit AS client_limite_credit, 
@@ -156,12 +156,12 @@ class DetteRepository extends AbstractRepository
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function findEnRetard(): array
+    public static function findEnRetard(): array
     {
-        $stmt = $this->pdo->query(
+        $stmt = self::getPDO()->query(
             "SELECT d.*, 
                     c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone, 
                     c.email AS client_email, c.adresse AS client_adresse, c.limite_credit AS client_limite_credit, 
@@ -178,17 +178,18 @@ class DetteRepository extends AbstractRepository
         );
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function save(Dette $dette): bool
+    public static function save(Dette $dette): bool
     {
+        $pdo = self::getPDO();
         $venteId = $dette->getVente()?->getId();
         $clientId = $dette->getClient()?->getId() ?? 0;
         $statutId = $dette->getStatut()?->getId() ?? 1;
 
         if ($dette->getId() === null) {
-            $stmt = $this->pdo->prepare(
+            $stmt = $pdo->prepare(
                 "INSERT INTO dettes (vente_id, client_id, montant_total, montant_restant, date_creation, date_echeance, statut_id)
                  VALUES (:vente_id, :client_id, :montant_total, :montant_restant, :date_creation, :date_echeance, :statut_id)"
             );
@@ -206,12 +207,12 @@ class DetteRepository extends AbstractRepository
 
             $result = $stmt->execute();
             if ($result) {
-                $dette->setId((int)$this->pdo->lastInsertId());
+                $dette->setId((int)$pdo->lastInsertId());
             }
             return $result;
         }
 
-        $stmt = $this->pdo->prepare(
+        $stmt = $pdo->prepare(
             "UPDATE dettes SET
                 vente_id = :vente_id,
                 client_id = :client_id,
@@ -238,9 +239,9 @@ class DetteRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function updateMontantRestantEtStatut(int $detteId, float $montantRestant, int $statutId): bool
+    public static function updateMontantRestantEtStatut(int $detteId, float $montantRestant, int $statutId): bool
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "UPDATE dettes 
              SET montant_restant = :montant_restant, statut_id = :statut_id 
              WHERE id = :id"
@@ -252,9 +253,9 @@ class DetteRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function findPaiementsByDetteId(int $detteId): array
+    public static function findPaiementsByDetteId(int $detteId): array
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT p.*, 
                     m.code AS mode_code, m.libelle AS mode_libelle, m.est_actif AS mode_est_actif,
                     u.nom AS user_nom, u.prenom AS user_prenom, u.email AS user_email
@@ -268,16 +269,17 @@ class DetteRepository extends AbstractRepository
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydratePaiement'], $rows);
+        return array_map([self::class, 'hydratePaiement'], $rows);
     }
 
-    public function savePaiement(Paiement $paiement): bool
+    public static function savePaiement(Paiement $paiement): bool
     {
+        $pdo = self::getPDO();
         $detteId = $paiement->getDette()?->getId() ?? 0;
         $modePaiementId = $paiement->getModePaiement()?->getId() ?? 1;
         $userId = $paiement->getAgent()?->getId() ?? 1;
 
-        $stmt = $this->pdo->prepare(
+        $stmt = $pdo->prepare(
             "INSERT INTO paiements (dette_id, montant, date_paiement, mode_paiement_id, reference_paiement, user_id)
              VALUES (:dette_id, :montant, :date_paiement, :mode_paiement_id, :reference_paiement, :user_id)"
         );
@@ -290,57 +292,57 @@ class DetteRepository extends AbstractRepository
 
         $result = $stmt->execute();
         if ($result) {
-            $paiement->setId((int)$this->pdo->lastInsertId());
+            $paiement->setId((int)$pdo->lastInsertId());
         }
         return $result;
     }
 
-    public function delete(int $id): bool
+    public static function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM dettes WHERE id = :id");
+        $stmt = self::getPDO()->prepare("DELETE FROM dettes WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function count(): int
+    public static function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM dettes");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM dettes");
         return (int)$stmt->fetchColumn();
     }
 
-    public function countActives(): int
+    public static function countActives(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM dettes WHERE montant_restant > 0 AND statut_id != 2");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM dettes WHERE montant_restant > 0 AND statut_id != 2");
         return (int)$stmt->fetchColumn();
     }
 
-    public function countSoldees(): int
+    public static function countSoldees(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM dettes WHERE statut_id = 2 OR montant_restant <= 0");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM dettes WHERE statut_id = 2 OR montant_restant <= 0");
         return (int)$stmt->fetchColumn();
     }
 
-    public function getTotalEncours(): float
+    public static function getTotalEncours(): float
     {
-        $stmt = $this->pdo->query("SELECT COALESCE(SUM(montant_restant), 0) FROM dettes WHERE montant_restant > 0");
+        $stmt = self::getPDO()->query("SELECT COALESCE(SUM(montant_restant), 0) FROM dettes WHERE montant_restant > 0");
         return (float)$stmt->fetchColumn();
     }
 
-    public function getTotalRecouvrements(): float
+    public static function getTotalRecouvrements(): float
     {
-        $stmt = $this->pdo->query("SELECT COALESCE(SUM(montant), 0) FROM paiements");
+        $stmt = self::getPDO()->query("SELECT COALESCE(SUM(montant), 0) FROM paiements");
         return (float)$stmt->fetchColumn();
     }
 
-    public function getTotalCreancesInitiales(): float
+    public static function getTotalCreancesInitiales(): float
     {
-        $stmt = $this->pdo->query("SELECT COALESCE(SUM(montant_total), 0) FROM dettes");
+        $stmt = self::getPDO()->query("SELECT COALESCE(SUM(montant_total), 0) FROM dettes");
         return (float)$stmt->fetchColumn();
     }
 
-    public function findLignesVenteByVenteId(int $venteId): array
+    public static function findLignesVenteByVenteId(int $venteId): array
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT lv.*, 
                     p.code AS produit_code, p.libelle AS produit_libelle, p.prix_vente AS produit_prix_vente
              FROM lignes_vente lv
@@ -378,10 +380,10 @@ class DetteRepository extends AbstractRepository
         return $lignes;
     }
 
-    protected function attachDetails(Dette $dette): Dette
+    protected static function attachDetails(Dette $dette): Dette
     {
         if ($dette->getId() !== null) {
-            $paiements = $this->findPaiementsByDetteId($dette->getId());
+            $paiements = self::findPaiementsByDetteId($dette->getId());
             foreach ($paiements as $paiement) {
                 $paiement->setDette($dette);
             }
@@ -394,7 +396,7 @@ class DetteRepository extends AbstractRepository
         }
 
         if ($dette->getVente() !== null && $dette->getVente()->getId() !== null) {
-            $lignes = $this->findLignesVenteByVenteId($dette->getVente()->getId());
+            $lignes = self::findLignesVenteByVenteId($dette->getVente()->getId());
             foreach ($lignes as $ligne) {
                 $dette->getVente()->ajouterLigne($ligne);
             }
@@ -403,7 +405,7 @@ class DetteRepository extends AbstractRepository
         return $dette;
     }
 
-    protected function hydrate(array $row): Dette
+    protected static function hydrate(array $row): Dette
     {
         $client = null;
         if (!empty($row['client_id'])) {
@@ -451,7 +453,7 @@ class DetteRepository extends AbstractRepository
         );
     }
 
-    public function hydratePaiement(array $row): Paiement
+    public static function hydratePaiement(array $row): Paiement
     {
         $mode = null;
         if (!empty($row['mode_paiement_id'])) {

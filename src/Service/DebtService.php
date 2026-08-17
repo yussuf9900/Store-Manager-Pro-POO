@@ -17,21 +17,7 @@ use Throwable;
 
 class DebtService
 {
-    private PDO $pdo;
-    private DetteRepository $detteRepository;
-    private ClientRepository $clientRepository;
-
-    public function __construct(
-        ?PDO $pdo = null,
-        ?DetteRepository $detteRepository = null,
-        ?ClientRepository $clientRepository = null
-    ) {
-        $this->pdo = $pdo ?? Database::getPDO();
-        $this->detteRepository = $detteRepository ?? new DetteRepository($this->pdo);
-        $this->clientRepository = $clientRepository ?? new ClientRepository($this->pdo);
-    }
-
-    public function enregistrerRemboursement(
+    public static function enregistrerRemboursement(
         int $detteId,
         float $montant,
         int $modePaiementId,
@@ -42,7 +28,7 @@ class DebtService
             throw new InvalidArgumentException("Le montant du remboursement doit être strictement supérieur à zéro.");
         }
 
-        $dette = $this->detteRepository->findById($detteId);
+        $dette = DetteRepository::findById($detteId);
         if (!$dette) {
             throw new InvalidArgumentException("La dette #DT-{$detteId} est introuvable.");
         }
@@ -61,7 +47,8 @@ class DebtService
             );
         }
 
-        $this->pdo->beginTransaction();
+        $pdo = Database::getPDO();
+        $pdo->beginTransaction();
 
         try {
             $paiement = new Paiement(
@@ -73,7 +60,7 @@ class DebtService
                 agent: new User(id: $userId)
             );
 
-            $this->detteRepository->savePaiement($paiement);
+            DetteRepository::savePaiement($paiement);
 
             $nouveauReste = max(0.0, round($dette->getMontantRestant() - $montant, 2));
 
@@ -85,13 +72,13 @@ class DebtService
                 $statutId = 1;
             }
 
-            $this->detteRepository->updateMontantRestantEtStatut($detteId, $nouveauReste, $statutId);
+            DetteRepository::updateMontantRestantEtStatut($detteId, $nouveauReste, $statutId);
 
             if ($dette->getClient() !== null && $dette->getClient()->getId() !== null) {
-                $this->clientRepository->diminuerDette($dette->getClient()->getId(), $montant);
+                ClientRepository::diminuerDette($dette->getClient()->getId(), $montant);
             }
 
-            $this->pdo->commit();
+            $pdo->commit();
 
             $estSoldee = ($nouveauReste <= 0.0);
             $message = $estSoldee
@@ -110,25 +97,25 @@ class DebtService
                 'message' => $message
             ];
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
             }
             throw $e;
         }
     }
 
-    public function soldeTotalDette(
+    public static function soldeTotalDette(
         int $detteId,
         int $modePaiementId,
         int $userId = 1,
         ?string $reference = null
     ): array {
-        $dette = $this->detteRepository->findById($detteId);
+        $dette = DetteRepository::findById($detteId);
         if (!$dette) {
             throw new InvalidArgumentException("La dette #DT-{$detteId} est introuvable.");
         }
 
-        return $this->enregistrerRemboursement(
+        return self::enregistrerRemboursement(
             $detteId,
             $dette->getMontantRestant(),
             $modePaiementId,
@@ -137,39 +124,39 @@ class DebtService
         );
     }
 
-    public function getDette(int $id): ?Dette
+    public static function getDette(int $id): ?Dette
     {
-        return $this->detteRepository->findById($id);
+        return DetteRepository::findById($id);
     }
 
-    public function getDettesActives(): array
+    public static function getDettesActives(): array
     {
-        return $this->detteRepository->findDettesActives();
+        return DetteRepository::findDettesActives();
     }
 
-    public function getAllDettes(): array
+    public static function getAllDettes(): array
     {
-        return $this->detteRepository->findAll();
+        return DetteRepository::findAll();
     }
 
-    public function getDettesClient(int $clientId): array
+    public static function getDettesClient(int $clientId): array
     {
-        return $this->detteRepository->findByClient($clientId);
+        return DetteRepository::findByClient($clientId);
     }
 
-    public function getHistoriquePaiements(int $detteId): array
+    public static function getHistoriquePaiements(int $detteId): array
     {
-        return $this->detteRepository->findPaiementsByDetteId($detteId);
+        return DetteRepository::findPaiementsByDetteId($detteId);
     }
 
-    public function getStatistiquesDettes(): array
+    public static function getStatistiquesDettes(): array
     {
-        $totalEncours = $this->detteRepository->getTotalEncours();
-        $totalRecouvrements = $this->detteRepository->getTotalRecouvrements();
-        $totalCreancesInitiales = $this->detteRepository->getTotalCreancesInitiales();
-        $nombreActives = $this->detteRepository->countActives();
-        $nombreSoldees = $this->detteRepository->countSoldees();
-        $nombreTotal = $this->detteRepository->count();
+        $totalEncours = DetteRepository::getTotalEncours();
+        $totalRecouvrements = DetteRepository::getTotalRecouvrements();
+        $totalCreancesInitiales = DetteRepository::getTotalCreancesInitiales();
+        $nombreActives = DetteRepository::countActives();
+        $nombreSoldees = DetteRepository::countSoldees();
+        $nombreTotal = DetteRepository::count();
 
         $tauxRecouvrement = $totalCreancesInitiales > 0
             ? round(($totalRecouvrements / $totalCreancesInitiales) * 100, 1)

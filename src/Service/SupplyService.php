@@ -19,31 +19,14 @@ use Throwable;
 
 class SupplyService
 {
-    private PDO $pdo;
-    private ApprovisionnementRepository $approRepository;
-    private ProduitRepository $produitRepository;
-    private FournisseurRepository $fournisseurRepository;
-
-    public function __construct(
-        ?PDO $pdo = null,
-        ?ApprovisionnementRepository $approRepository = null,
-        ?ProduitRepository $produitRepository = null,
-        ?FournisseurRepository $fournisseurRepository = null
-    ) {
-        $this->pdo = $pdo ?? Database::getPDO();
-        $this->approRepository = $approRepository ?? new ApprovisionnementRepository($this->pdo);
-        $this->produitRepository = $produitRepository ?? new ProduitRepository($this->pdo);
-        $this->fournisseurRepository = $fournisseurRepository ?? new FournisseurRepository($this->pdo);
-    }
-
-    public function creerApprovisionnement(
+    public static function creerApprovisionnement(
         int $fournisseurId,
         array $articles,
         int $userId = 1,
         ?string $numeroBL = null,
         bool $receptionnerImmediatement = false
     ): Approvisionnement {
-        $fournisseur = $this->fournisseurRepository->findById($fournisseurId);
+        $fournisseur = FournisseurRepository::findById($fournisseurId);
         if (!$fournisseur) {
             throw new InvalidArgumentException("Le fournisseur sélectionné est introuvable.");
         }
@@ -62,7 +45,8 @@ class SupplyService
             $numeroBL = trim($numeroBL);
         }
 
-        $this->pdo->beginTransaction();
+        $pdo = Database::getPDO();
+        $pdo->beginTransaction();
 
         try {
             $lignes = [];
@@ -70,7 +54,7 @@ class SupplyService
 
             foreach ($articles as $art) {
                 $produitId = (int)($art['produit_id'] ?? $art['id'] ?? 0);
-                $produit = $this->produitRepository->findById($produitId);
+                $produit = ProduitRepository::findById($produitId);
                 if (!$produit) {
                     throw new RuntimeException("Produit #{$produitId} introuvable.");
                 }
@@ -112,34 +96,34 @@ class SupplyService
                 lignes: $lignes
             );
 
-            $this->approRepository->save($appro);
+            ApprovisionnementRepository::save($appro);
 
             foreach ($lignes as $ligne) {
                 $ligne->setApprovisionnement($appro);
-                $this->approRepository->saveLigne($ligne);
+                ApprovisionnementRepository::saveLigne($ligne);
 
                 if ($receptionnerImmediatement && $ligne->getProduit()?->getId()) {
-                    $this->produitRepository->incrementStock($ligne->getProduit()->getId(), $ligne->getQuantite());
+                    ProduitRepository::incrementStock($ligne->getProduit()->getId(), $ligne->getQuantite());
                 }
             }
 
-            $this->pdo->commit();
+            $pdo->commit();
 
             return $appro;
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
             }
             throw $e;
         }
     }
 
-    public function receptionnerBL(
+    public static function receptionnerBL(
         int $approvisionnementId,
         ?array $quantitesLivrees = null,
         int $userId = 1
     ): array {
-        $appro = $this->approRepository->findById($approvisionnementId);
+        $appro = ApprovisionnementRepository::findById($approvisionnementId);
         if (!$appro) {
             throw new InvalidArgumentException("Le bon de livraison #{$approvisionnementId} est introuvable.");
         }
@@ -157,7 +141,8 @@ class SupplyService
             throw new RuntimeException("Le bon de livraison ne contient aucun article à réceptionner.");
         }
 
-        $this->pdo->beginTransaction();
+        $pdo = Database::getPDO();
+        $pdo->beginTransaction();
 
         try {
             $totalArticles = 0;
@@ -181,21 +166,21 @@ class SupplyService
 
                 if ($qteReçue !== $ligne->getQuantite()) {
                     $ligne->setQuantite($qteReçue);
-                    $this->approRepository->updateLigne($ligne);
+                    ApprovisionnementRepository::updateLigne($ligne);
                 }
 
                 if ($qteReçue > 0 && $prodId !== null) {
-                    $this->produitRepository->incrementStock($prodId, $qteReçue);
+                    ProduitRepository::incrementStock($prodId, $qteReçue);
                 }
 
                 $totalArticles += $qteReçue;
                 $nouveauTotal += $ligne->getSousTotal();
             }
 
-            $this->approRepository->updateMontantTotal($approvisionnementId, $nouveauTotal);
-            $this->approRepository->updateStatut($approvisionnementId, 2);
+            ApprovisionnementRepository::updateMontantTotal($approvisionnementId, $nouveauTotal);
+            ApprovisionnementRepository::updateStatut($approvisionnementId, 2);
 
-            $this->pdo->commit();
+            $pdo->commit();
 
             return [
                 'success' => true,
@@ -206,45 +191,45 @@ class SupplyService
                 'message' => "Bon de livraison " . $appro->getNumeroBL() . " réceptionné avec succès ! " . $totalArticles . " articles ajoutés au stock."
             ];
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
             }
             throw $e;
         }
     }
 
-    public function getApprovisionnement(int $id): ?Approvisionnement
+    public static function getApprovisionnement(int $id): ?Approvisionnement
     {
-        return $this->approRepository->findById($id);
+        return ApprovisionnementRepository::findById($id);
     }
 
-    public function getApprovisionnementByBL(string $numeroBL): ?Approvisionnement
+    public static function getApprovisionnementByBL(string $numeroBL): ?Approvisionnement
     {
-        return $this->approRepository->findByNumeroBL($numeroBL);
+        return ApprovisionnementRepository::findByNumeroBL($numeroBL);
     }
 
-    public function getAllApprovisionnements(): array
+    public static function getAllApprovisionnements(): array
     {
-        return $this->approRepository->findAll();
+        return ApprovisionnementRepository::findAll();
     }
 
-    public function getApprovisionnementsEnAttente(): array
+    public static function getApprovisionnementsEnAttente(): array
     {
-        return $this->approRepository->findEnAttente();
+        return ApprovisionnementRepository::findEnAttente();
     }
 
-    public function getApprovisionnementsRecus(): array
+    public static function getApprovisionnementsRecus(): array
     {
-        return $this->approRepository->findRecus();
+        return ApprovisionnementRepository::findRecus();
     }
 
-    public function getStatistiquesAppro(): array
+    public static function getStatistiquesAppro(): array
     {
-        $totalCout = $this->approRepository->getTotalCoutEntrees();
-        $nombreTotal = $this->approRepository->count();
-        $nombreRecus = count($this->approRepository->findRecus());
-        $nombreEnAttente = count($this->approRepository->findEnAttente());
-        $fournisseurs = $this->fournisseurRepository->findAll();
+        $totalCout = ApprovisionnementRepository::getTotalCoutEntrees();
+        $nombreTotal = ApprovisionnementRepository::count();
+        $nombreRecus = count(ApprovisionnementRepository::findRecus());
+        $nombreEnAttente = count(ApprovisionnementRepository::findEnAttente());
+        $fournisseurs = FournisseurRepository::findAll();
 
         return [
             'total_cout_entrees' => $totalCout,

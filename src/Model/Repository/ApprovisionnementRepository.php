@@ -13,7 +13,7 @@ use PDO;
 
 class ApprovisionnementRepository extends AbstractRepository
 {
-    private string $baseSelect = "SELECT a.*, 
+    private static string $baseSelect = "SELECT a.*, 
             f.nom AS fournisseur_nom, f.contact_nom AS fournisseur_contact, f.telephone AS fournisseur_telephone, 
             f.email AS fournisseur_email, f.adresse AS fournisseur_adresse,
             s.code AS statut_code, s.libelle AS statut_libelle,
@@ -23,9 +23,9 @@ class ApprovisionnementRepository extends AbstractRepository
         LEFT JOIN statuts_appro s ON a.statut_id = s.id
         LEFT JOIN utilisateurs u ON a.user_id = u.id";
 
-    public function findById(int $id): ?Approvisionnement
+    public static function findById(int $id): ?Approvisionnement
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE a.id = :id LIMIT 1");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE a.id = :id LIMIT 1");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch();
@@ -34,13 +34,13 @@ class ApprovisionnementRepository extends AbstractRepository
             return null;
         }
 
-        $appro = $this->hydrate($row);
-        return $this->attachDetails($appro);
+        $appro = self::hydrate($row);
+        return self::attachDetails($appro);
     }
 
-    public function findByNumeroBL(string $numeroBL): ?Approvisionnement
+    public static function findByNumeroBL(string $numeroBL): ?Approvisionnement
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE UPPER(a.numero_bl) = :bl LIMIT 1");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE UPPER(a.numero_bl) = :bl LIMIT 1");
         $stmt->bindValue(':bl', strtoupper(trim($numeroBL)), PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
@@ -49,65 +49,66 @@ class ApprovisionnementRepository extends AbstractRepository
             return null;
         }
 
-        $appro = $this->hydrate($row);
-        return $this->attachDetails($appro);
+        $appro = self::hydrate($row);
+        return self::attachDetails($appro);
     }
 
-    public function findAll(): array
+    public static function findAll(): array
     {
-        $stmt = $this->pdo->query("{$this->baseSelect} ORDER BY a.date_appro DESC, a.id DESC");
+        $stmt = self::getPDO()->query(self::$baseSelect . " ORDER BY a.date_appro DESC, a.id DESC");
         $rows = $stmt->fetchAll();
 
         return array_map(function ($row) {
-            $appro = $this->hydrate($row);
-            return $this->attachDetails($appro);
+            $appro = self::hydrate($row);
+            return self::attachDetails($appro);
         }, $rows);
     }
 
-    public function findByFournisseur(int $fournisseurId): array
+    public static function findByFournisseur(int $fournisseurId): array
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE a.fournisseur_id = :fid ORDER BY a.date_appro DESC, a.id DESC");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE a.fournisseur_id = :fid ORDER BY a.date_appro DESC, a.id DESC");
         $stmt->bindValue(':fid', $fournisseurId, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
         return array_map(function ($row) {
-            $appro = $this->hydrate($row);
-            return $this->attachDetails($appro);
+            $appro = self::hydrate($row);
+            return self::attachDetails($appro);
         }, $rows);
     }
 
-    public function findByStatut(int $statutId): array
+    public static function findByStatut(int $statutId): array
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE a.statut_id = :sid ORDER BY a.date_appro DESC, a.id DESC");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE a.statut_id = :sid ORDER BY a.date_appro DESC, a.id DESC");
         $stmt->bindValue(':sid', $statutId, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
         return array_map(function ($row) {
-            $appro = $this->hydrate($row);
-            return $this->attachDetails($appro);
+            $appro = self::hydrate($row);
+            return self::attachDetails($appro);
         }, $rows);
     }
 
-    public function findEnAttente(): array
+    public static function findEnAttente(): array
     {
-        return $this->findByStatut(1);
+        return self::findByStatut(1);
     }
 
-    public function findRecus(): array
+    public static function findRecus(): array
     {
-        return $this->findByStatut(2);
+        return self::findByStatut(2);
     }
 
-    public function save(Approvisionnement $appro): bool
+    public static function save(Approvisionnement $appro): bool
     {
+        $pdo = self::getPDO();
         $statutId = $appro->getStatut()?->getId() ?? 1;
         $fournisseurId = $appro->getFournisseur()?->getId() ?? 1;
         $userId = $appro->getAgentStock()?->getId() ?? 1;
 
         if ($appro->getId() === null) {
-            $stmt = $this->pdo->prepare(
+            $stmt = $pdo->prepare(
                 "INSERT INTO approvisionnements (numero_bl, date_appro, montant_total, statut_id, fournisseur_id, user_id, created_at)
                  VALUES (:numero_bl, :date_appro, :montant_total, :statut_id, :fournisseur_id, :user_id, :created_at)"
             );
@@ -121,12 +122,12 @@ class ApprovisionnementRepository extends AbstractRepository
 
             $result = $stmt->execute();
             if ($result) {
-                $appro->setId((int)$this->pdo->lastInsertId());
+                $appro->setId((int)$pdo->lastInsertId());
             }
             return $result;
         }
 
-        $stmt = $this->pdo->prepare(
+        $stmt = $pdo->prepare(
             "UPDATE approvisionnements SET
                 numero_bl = :numero_bl,
                 date_appro = :date_appro,
@@ -147,13 +148,14 @@ class ApprovisionnementRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function saveLigne(LigneApprovisionnement $ligne): bool
+    public static function saveLigne(LigneApprovisionnement $ligne): bool
     {
+        $pdo = self::getPDO();
         $approId = $ligne->getApprovisionnement()?->getId();
         $produitId = $ligne->getProduit()?->getId() ?? 0;
 
         if ($ligne->getId() === null) {
-            $stmt = $this->pdo->prepare(
+            $stmt = $pdo->prepare(
                 "INSERT INTO lignes_approvisionnement (approvisionnement_id, produit_id, quantite, prix_achat_unitaire, sous_total)
                  VALUES (:appro_id, :produit_id, :quantite, :prix_achat, :sous_total)"
             );
@@ -165,17 +167,17 @@ class ApprovisionnementRepository extends AbstractRepository
 
             $result = $stmt->execute();
             if ($result) {
-                $ligne->setId((int)$this->pdo->lastInsertId());
+                $ligne->setId((int)$pdo->lastInsertId());
             }
             return $result;
         }
 
-        return $this->updateLigne($ligne);
+        return self::updateLigne($ligne);
     }
 
-    public function updateLigne(LigneApprovisionnement $ligne): bool
+    public static function updateLigne(LigneApprovisionnement $ligne): bool
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "UPDATE lignes_approvisionnement SET
                 quantite = :quantite,
                 prix_achat_unitaire = :prix_achat,
@@ -190,27 +192,27 @@ class ApprovisionnementRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function updateStatut(int $approId, int $statutId): bool
+    public static function updateStatut(int $approId, int $statutId): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE approvisionnements SET statut_id = :sid WHERE id = :id");
+        $stmt = self::getPDO()->prepare("UPDATE approvisionnements SET statut_id = :sid WHERE id = :id");
         $stmt->bindValue(':sid', $statutId, PDO::PARAM_INT);
         $stmt->bindValue(':id', $approId, PDO::PARAM_INT);
 
         return $stmt->execute();
     }
 
-    public function updateMontantTotal(int $approId, float $montantTotal): bool
+    public static function updateMontantTotal(int $approId, float $montantTotal): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE approvisionnements SET montant_total = :total WHERE id = :id");
+        $stmt = self::getPDO()->prepare("UPDATE approvisionnements SET montant_total = :total WHERE id = :id");
         $stmt->bindValue(':total', max(0.0, $montantTotal));
         $stmt->bindValue(':id', $approId, PDO::PARAM_INT);
 
         return $stmt->execute();
     }
 
-    public function findLignesByApproId(int $approId): array
+    public static function findLignesByApproId(int $approId): array
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT la.*, 
                     p.code AS produit_code, p.libelle AS produit_libelle, p.description AS produit_description,
                     p.prix_achat AS produit_prix_achat, p.prix_vente AS produit_prix_vente, 
@@ -225,13 +227,13 @@ class ApprovisionnementRepository extends AbstractRepository
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrateLigne'], $rows);
+        return array_map([self::class, 'hydrateLigne'], $rows);
     }
 
-    public function attachDetails(Approvisionnement $appro): Approvisionnement
+    public static function attachDetails(Approvisionnement $appro): Approvisionnement
     {
         if ($appro->getId() !== null) {
-            $lignes = $this->findLignesByApproId($appro->getId());
+            $lignes = self::findLignesByApproId($appro->getId());
             foreach ($lignes as $ligne) {
                 $ligne->setApprovisionnement($appro);
             }
@@ -240,42 +242,55 @@ class ApprovisionnementRepository extends AbstractRepository
         return $appro;
     }
 
-    public function getTotalCoutEntrees(): float
+    public static function getTotalCoutEntrees(): float
     {
-        $stmt = $this->pdo->query("SELECT COALESCE(SUM(montant_total), 0) FROM approvisionnements WHERE statut_id = 2");
+        $stmt = self::getPDO()->query("SELECT COALESCE(SUM(montant_total), 0) FROM approvisionnements WHERE statut_id = 2");
         $total = (float)$stmt->fetchColumn();
         if ($total <= 0) {
-            $stmtAll = $this->pdo->query("SELECT COALESCE(SUM(montant_total), 0) FROM approvisionnements");
+            $stmtAll = self::getPDO()->query("SELECT COALESCE(SUM(montant_total), 0) FROM approvisionnements");
             $total = (float)$stmtAll->fetchColumn();
         }
         return $total;
     }
 
-    public function count(): int
+    public static function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM approvisionnements");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM approvisionnements");
         return (int)$stmt->fetchColumn();
     }
 
-    public function delete(int $id): bool
+    public static function countRecus(): int
     {
-        $stmtLignes = $this->pdo->prepare("DELETE FROM lignes_approvisionnement WHERE approvisionnement_id = :id");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM approvisionnements WHERE statut_id = 2");
+        return (int)$stmt->fetchColumn();
+    }
+
+    public static function countEnAttente(): int
+    {
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM approvisionnements WHERE statut_id = 1");
+        return (int)$stmt->fetchColumn();
+    }
+
+    public static function delete(int $id): bool
+    {
+        $pdo = self::getPDO();
+        $stmtLignes = $pdo->prepare("DELETE FROM lignes_approvisionnement WHERE approvisionnement_id = :id");
         $stmtLignes->bindValue(':id', $id, PDO::PARAM_INT);
         $stmtLignes->execute();
 
-        $stmt = $this->pdo->prepare("DELETE FROM approvisionnements WHERE id = :id");
+        $stmt = $pdo->prepare("DELETE FROM approvisionnements WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function deleteLigne(int $ligneId): bool
+    public static function deleteLigne(int $ligneId): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM lignes_approvisionnement WHERE id = :id");
+        $stmt = self::getPDO()->prepare("DELETE FROM lignes_approvisionnement WHERE id = :id");
         $stmt->bindValue(':id', $ligneId, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    protected function hydrate(array $row): Approvisionnement
+    protected static function hydrate(array $row): Approvisionnement
     {
         $fournisseur = null;
         if (!empty($row['fournisseur_id'])) {
@@ -324,7 +339,7 @@ class ApprovisionnementRepository extends AbstractRepository
         );
     }
 
-    public function hydrateLigne(array $row): LigneApprovisionnement
+    public static function hydrateLigne(array $row): LigneApprovisionnement
     {
         $produit = null;
         if (!empty($row['produit_id'])) {

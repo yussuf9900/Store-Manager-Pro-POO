@@ -7,38 +7,39 @@ use PDO;
 
 class CategorieRepository extends AbstractRepository
 {
-    public function findById(int $id): ?Categorie
+    public static function findById(int $id): ?Categorie
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM categories WHERE id = :id LIMIT 1");
+        $stmt = self::getPDO()->prepare("SELECT * FROM categories WHERE id = :id LIMIT 1");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findByCode(string $code): ?Categorie
+    public static function findByCode(string $code): ?Categorie
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM categories WHERE UPPER(code) = :code LIMIT 1");
+        $stmt = self::getPDO()->prepare("SELECT * FROM categories WHERE UPPER(code) = :code LIMIT 1");
         $stmt->bindValue(':code', strtoupper(trim($code)), PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findAll(): array
+    public static function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM categories ORDER BY libelle ASC");
+        $stmt = self::getPDO()->query("SELECT * FROM categories ORDER BY libelle ASC");
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function save(Categorie $categorie): bool
+    public static function save(Categorie $categorie): bool
     {
+        $pdo = self::getPDO();
         if ($categorie->getId() === null) {
-            $stmt = $this->pdo->prepare(
+            $stmt = $pdo->prepare(
                 "INSERT INTO categories (code, libelle, description) VALUES (:code, :libelle, :description)"
             );
             $stmt->bindValue(':code', $categorie->getCode(), PDO::PARAM_STR);
@@ -47,12 +48,12 @@ class CategorieRepository extends AbstractRepository
 
             $result = $stmt->execute();
             if ($result) {
-                $categorie->setId((int)$this->pdo->lastInsertId());
+                $categorie->setId((int)$pdo->lastInsertId());
             }
             return $result;
         }
 
-        $stmt = $this->pdo->prepare(
+        $stmt = $pdo->prepare(
             "UPDATE categories SET code = :code, libelle = :libelle, description = :description WHERE id = :id"
         );
         $stmt->bindValue(':code', $categorie->getCode(), PDO::PARAM_STR);
@@ -63,20 +64,20 @@ class CategorieRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function delete(int $id): bool
+    public static function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM categories WHERE id = :id");
+        $stmt = self::getPDO()->prepare("DELETE FROM categories WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function count(): int
+    public static function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM categories");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM categories");
         return (int)$stmt->fetchColumn();
     }
 
-    protected function hydrate(array $row): Categorie
+    protected static function hydrate(array $row): Categorie
     {
         return new Categorie(
             id: isset($row['id']) ? (int)$row['id'] : null,

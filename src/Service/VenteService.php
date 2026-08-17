@@ -21,21 +21,7 @@ use Throwable;
 
 class VenteService
 {
-    private Database $database;
-    private ProduitRepository $produitRepository;
-    private ClientRepository $clientRepository;
-
-    public function __construct(
-        ?Database $database = null,
-        ?ProduitRepository $produitRepository = null,
-        ?ClientRepository $clientRepository = null
-    ) {
-        $this->database = $database ?? Database::getInstance();
-        $this->produitRepository = $produitRepository ?? new ProduitRepository();
-        $this->clientRepository = $clientRepository ?? new ClientRepository();
-    }
-
-    public function calculerTotauxPanier(array $articles): array
+    public static function calculerTotauxPanier(array $articles): array
     {
         $totalBrut = 0.0;
         $totalRemises = 0.0;
@@ -63,7 +49,7 @@ class VenteService
         ];
     }
 
-    public function preparerLigneArticle(int|string $produitIdOuCode, int $quantite = 1, float $remise = 0.0): array
+    public static function preparerLigneArticle(int|string $produitIdOuCode, int $quantite = 1, float $remise = 0.0): array
     {
         if ($quantite <= 0) {
             throw new InvalidArgumentException("La quantité commandée doit être strictement positive.");
@@ -74,8 +60,8 @@ class VenteService
         }
 
         $produit = is_numeric($produitIdOuCode)
-            ? $this->produitRepository->findById((int)$produitIdOuCode)
-            : $this->produitRepository->findByCode((string)$produitIdOuCode);
+            ? ProduitRepository::findById((int)$produitIdOuCode)
+            : ProduitRepository::findByCode((string)$produitIdOuCode);
 
         if (!$produit) {
             throw new InvalidArgumentException("L'article demandé '" . htmlspecialchars((string)$produitIdOuCode) . "' est introuvable dans le catalogue.");
@@ -107,7 +93,7 @@ class VenteService
         ];
     }
 
-    public function validerVente(
+    public static function validerVente(
         int $userId,
         ?int $clientId = null,
         int $modePaiementId = 1,
@@ -131,7 +117,7 @@ class VenteService
                 throw new InvalidArgumentException("Données d'article invalides (Produit ID: {$produitId}, Quantité: {$quantite}).");
             }
 
-            $produit = $this->produitRepository->findById($produitId);
+            $produit = ProduitRepository::findById($produitId);
             if (!$produit) {
                 throw new InvalidArgumentException("L'article ID #{$produitId} n'existe pas en base de données.");
             }
@@ -181,7 +167,7 @@ class VenteService
                 throw new InvalidArgumentException("Un client nominatif est obligatoire pour toute vente à crédit ou avec reste à payer (Montant restant : " . number_format($montantRestant, 0, ',', ' ') . " FCFA).");
             }
 
-            $client = $this->clientRepository->findById($clientId);
+            $client = ClientRepository::findById($clientId);
             if (!$client) {
                 throw new InvalidArgumentException("Le compte client sélectionné (ID #{$clientId}) est introuvable.");
             }
@@ -200,14 +186,14 @@ class VenteService
                 );
             }
         } elseif ($clientId !== null && $clientId > 0) {
-            $client = $this->clientRepository->findById($clientId);
+            $client = ClientRepository::findById($clientId);
         }
 
         $pdo = Database::getPDO();
         $pdo->beginTransaction();
 
         try {
-            $numeroFacture = $this->genererNumeroFacture();
+            $numeroFacture = self::genererNumeroFacture();
 
             $dateVenteStr = (new DateTime())->format('Y-m-d H:i:s');
             $stmtVente = $pdo->prepare(
@@ -298,7 +284,7 @@ class VenteService
 
             $pdo->commit();
 
-            return $this->getVente($venteId);
+            return self::getVente($venteId);
 
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -308,34 +294,34 @@ class VenteService
         }
     }
 
-    public function getVente(int $venteId): ?Vente
+    public static function getVente(int $venteId): ?Vente
     {
         $pdo = Database::getPDO();
-        $stmt = $pdo->prepare("{$this->getBaseSelect()} WHERE v.id = :id LIMIT 1");
+        $stmt = $pdo->prepare(self::getBaseSelect() . " WHERE v.id = :id LIMIT 1");
         $stmt->bindValue(':id', $venteId, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrateVenteWithLignes($row) : null;
+        return $row ? self::hydrateVenteWithLignes($row) : null;
     }
 
-    public function getVenteByFacture(string $numeroFacture): ?Vente
+    public static function getVenteByFacture(string $numeroFacture): ?Vente
     {
         $pdo = Database::getPDO();
-        $stmt = $pdo->prepare("{$this->getBaseSelect()} WHERE v.numero_facture = :facture LIMIT 1");
+        $stmt = $pdo->prepare(self::getBaseSelect() . " WHERE v.numero_facture = :facture LIMIT 1");
         $stmt->bindValue(':facture', trim($numeroFacture), PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrateVenteWithLignes($row) : null;
+        return $row ? self::hydrateVenteWithLignes($row) : null;
     }
 
-    public function getVentesDuJour(?DateTime $date = null): array
+    public static function getVentesDuJour(?DateTime $date = null): array
     {
         $dateStr = ($date ?? new DateTime())->format('Y-m-d');
         $pdo = Database::getPDO();
         $stmt = $pdo->prepare(
-            "{$this->getBaseSelect()} 
+            self::getBaseSelect() . " 
              WHERE DATE(v.date_vente) = :date_jour 
              ORDER BY v.date_vente DESC, v.id DESC"
         );
@@ -343,14 +329,14 @@ class VenteService
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrateVenteWithLignes'], $rows);
+        return array_map([self::class, 'hydrateVenteWithLignes'], $rows);
     }
 
-    public function getVentesClient(int $clientId): array
+    public static function getVentesClient(int $clientId): array
     {
         $pdo = Database::getPDO();
         $stmt = $pdo->prepare(
-            "{$this->getBaseSelect()} 
+            self::getBaseSelect() . " 
              WHERE v.client_id = :client_id 
              ORDER BY v.date_vente DESC, v.id DESC"
         );
@@ -358,10 +344,10 @@ class VenteService
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrateVenteWithLignes'], $rows);
+        return array_map([self::class, 'hydrateVenteWithLignes'], $rows);
     }
 
-    public function getStatistiquesDuJour(?DateTime $date = null): array
+    public static function getStatistiquesDuJour(?DateTime $date = null): array
     {
         $targetDate = ($date ?? new DateTime())->format('Y-m-d');
         $pdo = Database::getPDO();
@@ -390,7 +376,7 @@ class VenteService
         ];
     }
 
-    private function getBaseSelect(): string
+    private static function getBaseSelect(): string
     {
         return "SELECT v.*,
             c.id AS client_id_pk, c.nom AS client_nom, c.prenom AS client_prenom, c.telephone AS client_telephone,
@@ -404,7 +390,7 @@ class VenteService
         LEFT JOIN modes_paiement mp ON v.mode_paiement_id = mp.id";
     }
 
-    private function hydrateVenteWithLignes(array $row): Vente
+    private static function hydrateVenteWithLignes(array $row): Vente
     {
         $client = null;
         if (!empty($row['client_id_pk'])) {
@@ -457,13 +443,13 @@ class VenteService
         );
 
         if ($vente->getId() !== null) {
-            $vente->setLignes($this->getLignesByVenteId($vente->getId()));
+            $vente->setLignes(self::getLignesByVenteId($vente->getId()));
         }
 
         return $vente;
     }
 
-    private function getLignesByVenteId(int $venteId): array
+    private static function getLignesByVenteId(int $venteId): array
     {
         $pdo = Database::getPDO();
         $stmt = $pdo->prepare(
@@ -506,7 +492,7 @@ class VenteService
         }, $rows);
     }
 
-    private function genererNumeroFacture(): string
+    private static function genererNumeroFacture(): string
     {
         $datePart = (new DateTime())->format('Ymd');
         $randomPart = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));

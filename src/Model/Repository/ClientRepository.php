@@ -8,38 +8,38 @@ use PDO;
 
 class ClientRepository extends AbstractRepository
 {
-    public function findById(int $id): ?Client
+    public static function findById(int $id): ?Client
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM clients WHERE id = :id LIMIT 1");
+        $stmt = self::getPDO()->prepare("SELECT * FROM clients WHERE id = :id LIMIT 1");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findByTelephone(string $telephone): ?Client
+    public static function findByTelephone(string $telephone): ?Client
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM clients WHERE telephone = :tel LIMIT 1");
+        $stmt = self::getPDO()->prepare("SELECT * FROM clients WHERE telephone = :tel LIMIT 1");
         $stmt->bindValue(':tel', trim($telephone), PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findAll(): array
+    public static function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM clients ORDER BY nom ASC, prenom ASC");
+        $stmt = self::getPDO()->query("SELECT * FROM clients ORDER BY nom ASC, prenom ASC");
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function search(string $term): array
+    public static function search(string $term): array
     {
         $cleanTerm = '%' . trim(strtolower($term)) . '%';
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT * FROM clients 
              WHERE LOWER(nom) LIKE :term 
                 OR LOWER(prenom) LIKE :term 
@@ -51,35 +51,36 @@ class ClientRepository extends AbstractRepository
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function findClientsAvecDettes(): array
+    public static function findClientsAvecDettes(): array
     {
-        $stmt = $this->pdo->query(
+        $stmt = self::getPDO()->query(
             "SELECT * FROM clients WHERE total_dettes_actuelles > 0 ORDER BY total_dettes_actuelles DESC, nom ASC"
         );
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function findSolvablesPourCredit(float $montant): array
+    public static function findSolvablesPourCredit(float $montant): array
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT * FROM clients WHERE (limite_credit - total_dettes_actuelles) >= :montant ORDER BY nom ASC, prenom ASC"
         );
         $stmt->bindValue(':montant', $montant);
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function save(Client $client): bool
+    public static function save(Client $client): bool
     {
+        $pdo = self::getPDO();
         if ($client->getId() === null) {
-            $stmt = $this->pdo->prepare(
+            $stmt = $pdo->prepare(
                 "INSERT INTO clients (nom, prenom, telephone, email, adresse, limite_credit, total_dettes_actuelles) 
                  VALUES (:nom, :prenom, :telephone, :email, :adresse, :limite_credit, :total_dettes_actuelles)"
             );
@@ -93,12 +94,12 @@ class ClientRepository extends AbstractRepository
 
             $result = $stmt->execute();
             if ($result) {
-                $client->setId((int)$this->pdo->lastInsertId());
+                $client->setId((int)$pdo->lastInsertId());
             }
             return $result;
         }
 
-        $stmt = $this->pdo->prepare(
+        $stmt = $pdo->prepare(
             "UPDATE clients SET 
                 nom = :nom, 
                 prenom = :prenom, 
@@ -121,17 +122,17 @@ class ClientRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function updateTotalDettes(int $id, float $montant): bool
+    public static function updateTotalDettes(int $id, float $montant): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE clients SET total_dettes_actuelles = :dette WHERE id = :id AND :dette >= 0");
+        $stmt = self::getPDO()->prepare("UPDATE clients SET total_dettes_actuelles = :dette WHERE id = :id AND :dette >= 0");
         $stmt->bindValue(':dette', max(0.0, $montant));
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function ajouterDette(int $id, float $montant): bool
+    public static function ajouterDette(int $id, float $montant): bool
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "UPDATE clients 
              SET total_dettes_actuelles = total_dettes_actuelles + :montant 
              WHERE id = :id AND (total_dettes_actuelles + :montant) <= limite_credit"
@@ -143,9 +144,9 @@ class ClientRepository extends AbstractRepository
         return $stmt->rowCount() > 0;
     }
 
-    public function diminuerDette(int $id, float $montant): bool
+    public static function diminuerDette(int $id, float $montant): bool
     {
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "UPDATE clients 
              SET total_dettes_actuelles = CASE 
                 WHEN total_dettes_actuelles >= :montant THEN total_dettes_actuelles - :montant 
@@ -160,26 +161,26 @@ class ClientRepository extends AbstractRepository
         return $stmt->rowCount() > 0;
     }
 
-    public function delete(int $id): bool
+    public static function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM clients WHERE id = :id");
+        $stmt = self::getPDO()->prepare("DELETE FROM clients WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function count(): int
+    public static function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM clients");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM clients");
         return (int)$stmt->fetchColumn();
     }
 
-    public function getTotalCreances(): float
+    public static function getTotalCreances(): float
     {
-        $stmt = $this->pdo->query("SELECT COALESCE(SUM(total_dettes_actuelles), 0) FROM clients");
+        $stmt = self::getPDO()->query("SELECT COALESCE(SUM(total_dettes_actuelles), 0) FROM clients");
         return (float)$stmt->fetchColumn();
     }
 
-    protected function hydrate(array $row): Client
+    protected static function hydrate(array $row): Client
     {
         $dateCreation = null;
         if (!empty($row['created_at'])) {

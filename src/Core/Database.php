@@ -9,13 +9,13 @@ use Exception;
 class Database
 {
     private static ?Database $instance = null;
-    private ?PDO $connection = null;
-    private string $driver = 'unknown';
-    private ?string $connectionMessage = null;
+    private static ?PDO $connection = null;
+    private static string $driver = 'unknown';
+    private static ?string $connectionMessage = null;
 
     private function __construct()
     {
-        $this->initConnection();
+        self::initConnection();
     }
 
     private function __clone()
@@ -38,40 +38,50 @@ class Database
 
     public static function getPDO(): PDO
     {
-        return self::getInstance()->getConnection();
-    }
-
-    public function getConnection(): PDO
-    {
-        if ($this->connection === null) {
-            $this->initConnection();
+        if (self::$connection === null) {
+            self::initConnection();
         }
 
-        return $this->connection;
+        return self::$connection;
     }
 
-    public function getDriver(): string
+    public static function getConnection(): PDO
     {
-        return $this->driver;
+        return self::getPDO();
     }
 
-    public function isSqlite(): bool
+    public static function getDriver(): string
     {
-        return $this->driver === 'sqlite';
+        if (self::$connection === null) {
+            self::initConnection();
+        }
+        return self::$driver;
     }
 
-    public function isPgsql(): bool
+    public static function isSqlite(): bool
     {
-        return $this->driver === 'pgsql';
+        return self::getDriver() === 'sqlite';
     }
 
-    public function getConnectionMessage(): ?string
+    public static function isPgsql(): bool
     {
-        return $this->connectionMessage;
+        return self::getDriver() === 'pgsql';
     }
 
-    private function initConnection(): void
+    public static function getConnectionMessage(): ?string
     {
+        if (self::$connection === null) {
+            self::initConnection();
+        }
+        return self::$connectionMessage;
+    }
+
+    private static function initConnection(): void
+    {
+        if (self::$connection !== null) {
+            return;
+        }
+
         $pdoOptions = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -87,9 +97,9 @@ class Database
 
             $dsnPgsql = "pgsql:host={$pgHost};port={$pgPort};dbname={$pgDb};";
 
-            $this->connection = new PDO($dsnPgsql, $pgUser, $pgPass, $pdoOptions);
-            $this->driver = 'pgsql';
-            $this->connectionMessage = "Connexion PostgreSQL établie ({$pgHost}:{$pgPort}/{$pgDb}).";
+            self::$connection = new PDO($dsnPgsql, $pgUser, $pgPass, $pdoOptions);
+            self::$driver = 'pgsql';
+            self::$connectionMessage = "Connexion PostgreSQL établie ({$pgHost}:{$pgPort}/{$pgDb}).";
             return;
         } catch (PDOException $pgException) {
             $pgError = $pgException->getMessage();
@@ -107,10 +117,10 @@ class Database
             $isNewDatabase = !file_exists($sqliteFile) || filesize($sqliteFile) === 0;
 
             $dsnSqlite = "sqlite:" . $sqliteFile;
-            $this->connection = new PDO($dsnSqlite, null, null, $pdoOptions);
-            $this->driver = 'sqlite';
+            self::$connection = new PDO($dsnSqlite, null, null, $pdoOptions);
+            self::$driver = 'sqlite';
 
-            $this->connection->exec("PRAGMA foreign_keys = ON;");
+            self::$connection->exec("PRAGMA foreign_keys = ON;");
 
             if ($isNewDatabase) {
                 $schemaFile = $baseDir . '/database/schema_sqlite.sql';
@@ -120,11 +130,11 @@ class Database
 
                 if (file_exists($schemaFile)) {
                     $schemaSql = file_get_contents($schemaFile);
-                    $this->connection->exec($schemaSql);
+                    self::$connection->exec($schemaSql);
                 }
             }
 
-            $this->connectionMessage = "Bascule sur SQLite réussie ({$sqliteFile}).";
+            self::$connectionMessage = "Bascule sur SQLite réussie ({$sqliteFile}).";
         } catch (PDOException $sqliteException) {
             throw new Exception(
                 "Erreur connexion BDD : Échec PostgreSQL ({$pgError}) et échec SQLite ({$sqliteException->getMessage()})"
@@ -132,28 +142,28 @@ class Database
         }
     }
 
-    public function beginTransaction(): bool
+    public static function beginTransaction(): bool
     {
-        return $this->getConnection()->beginTransaction();
+        return self::getConnection()->beginTransaction();
     }
 
-    public function commit(): bool
+    public static function commit(): bool
     {
-        return $this->getConnection()->commit();
+        return self::getConnection()->commit();
     }
 
-    public function rollBack(): bool
+    public static function rollBack(): bool
     {
-        return $this->getConnection()->rollBack();
+        return self::getConnection()->rollBack();
     }
 
-    public function inTransaction(): bool
+    public static function inTransaction(): bool
     {
-        return $this->getConnection()->inTransaction();
+        return self::getConnection()->inTransaction();
     }
 
-    public function lastInsertId(?string $name = null): string|false
+    public static function lastInsertId(?string $name = null): string|false
     {
-        return $this->getConnection()->lastInsertId($name);
+        return self::getConnection()->lastInsertId($name);
     }
 }

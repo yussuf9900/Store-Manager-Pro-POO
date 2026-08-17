@@ -9,62 +9,62 @@ use PDO;
 
 class ProduitRepository extends AbstractRepository
 {
-    private string $baseSelect = "SELECT p.*, 
+    private static string $baseSelect = "SELECT p.*, 
             c.id AS cat_id, c.code AS cat_code, c.libelle AS cat_libelle, c.description AS cat_description 
         FROM produits p 
         LEFT JOIN categories c ON p.categorie_id = c.id";
 
-    public function findById(int $id): ?Produit
+    public static function findById(int $id): ?Produit
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE p.id = :id LIMIT 1");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE p.id = :id LIMIT 1");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findByCode(string $code): ?Produit
+    public static function findByCode(string $code): ?Produit
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE UPPER(p.code) = :code LIMIT 1");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE UPPER(p.code) = :code LIMIT 1");
         $stmt->bindValue(':code', strtoupper(trim($code)), PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findAll(): array
+    public static function findAll(): array
     {
-        $stmt = $this->pdo->query("{$this->baseSelect} ORDER BY p.libelle ASC");
+        $stmt = self::getPDO()->query(self::$baseSelect . " ORDER BY p.libelle ASC");
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function findByCategorie(int $categorieId): array
+    public static function findByCategorie(int $categorieId): array
     {
-        $stmt = $this->pdo->prepare("{$this->baseSelect} WHERE p.categorie_id = :categorie_id ORDER BY p.libelle ASC");
+        $stmt = self::getPDO()->prepare(self::$baseSelect . " WHERE p.categorie_id = :categorie_id ORDER BY p.libelle ASC");
         $stmt->bindValue(':categorie_id', $categorieId, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function findEnAlerteStock(): array
+    public static function findEnAlerteStock(): array
     {
-        $stmt = $this->pdo->query("{$this->baseSelect} WHERE p.qte_stock <= p.seuil_alerte ORDER BY p.qte_stock ASC, p.libelle ASC");
+        $stmt = self::getPDO()->query(self::$baseSelect . " WHERE p.qte_stock <= p.seuil_alerte ORDER BY p.qte_stock ASC, p.libelle ASC");
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function search(string $term): array
+    public static function search(string $term): array
     {
         $cleanTerm = '%' . trim(strtolower($term)) . '%';
-        $stmt = $this->pdo->prepare(
-            "{$this->baseSelect} 
+        $stmt = self::getPDO()->prepare(
+            self::$baseSelect . " 
              WHERE LOWER(p.code) LIKE :term 
                 OR LOWER(p.libelle) LIKE :term 
                 OR LOWER(COALESCE(p.description, '')) LIKE :term 
@@ -74,15 +74,16 @@ class ProduitRepository extends AbstractRepository
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function save(Produit $produit): bool
+    public static function save(Produit $produit): bool
     {
+        $pdo = self::getPDO();
         $catId = $produit->getCategorie()?->getId();
 
         if ($produit->getId() === null) {
-            $stmt = $this->pdo->prepare(
+            $stmt = $pdo->prepare(
                 "INSERT INTO produits (code, libelle, description, prix_achat, prix_vente, qte_stock, seuil_alerte, categorie_id) 
                  VALUES (:code, :libelle, :description, :prix_achat, :prix_vente, :qte_stock, :seuil_alerte, :categorie_id)"
             );
@@ -97,12 +98,12 @@ class ProduitRepository extends AbstractRepository
 
             $result = $stmt->execute();
             if ($result) {
-                $produit->setId((int)$this->pdo->lastInsertId());
+                $produit->setId((int)$pdo->lastInsertId());
             }
             return $result;
         }
 
-        $stmt = $this->pdo->prepare(
+        $stmt = $pdo->prepare(
             "UPDATE produits SET 
                 code = :code, 
                 libelle = :libelle, 
@@ -127,17 +128,17 @@ class ProduitRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function updateStock(int $id, int $nouvelleQte): bool
+    public static function updateStock(int $id, int $nouvelleQte): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE produits SET qte_stock = :qte WHERE id = :id AND :qte >= 0");
+        $stmt = self::getPDO()->prepare("UPDATE produits SET qte_stock = :qte WHERE id = :id AND :qte >= 0");
         $stmt->bindValue(':qte', max(0, $nouvelleQte), PDO::PARAM_INT);
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function decrementStock(int $id, int $quantite): bool
+    public static function decrementStock(int $id, int $quantite): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE produits SET qte_stock = qte_stock - :qte WHERE id = :id AND qte_stock >= :qte");
+        $stmt = self::getPDO()->prepare("UPDATE produits SET qte_stock = qte_stock - :qte WHERE id = :id AND qte_stock >= :qte");
         $stmt->bindValue(':qte', $quantite, PDO::PARAM_INT);
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
@@ -145,9 +146,9 @@ class ProduitRepository extends AbstractRepository
         return $stmt->rowCount() > 0;
     }
 
-    public function incrementStock(int $id, int $quantite): bool
+    public static function incrementStock(int $id, int $quantite): bool
     {
-        $stmt = $this->pdo->prepare("UPDATE produits SET qte_stock = qte_stock + :qte WHERE id = :id");
+        $stmt = self::getPDO()->prepare("UPDATE produits SET qte_stock = qte_stock + :qte WHERE id = :id");
         $stmt->bindValue(':qte', $quantite, PDO::PARAM_INT);
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
@@ -155,26 +156,32 @@ class ProduitRepository extends AbstractRepository
         return $stmt->rowCount() > 0;
     }
 
-    public function delete(int $id): bool
+    public static function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM produits WHERE id = :id");
+        $stmt = self::getPDO()->prepare("DELETE FROM produits WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function count(): int
+    public static function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM produits");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM produits");
         return (int)$stmt->fetchColumn();
     }
 
-    public function countAlertes(): int
+    public static function countAlertes(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM produits WHERE qte_stock <= seuil_alerte");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM produits WHERE qte_stock <= seuil_alerte");
         return (int)$stmt->fetchColumn();
     }
 
-    protected function hydrate(array $row): Produit
+    public static function getValeurTotaleStock(): float
+    {
+        $stmt = self::getPDO()->query("SELECT COALESCE(SUM(prix_vente * qte_stock), 0) FROM produits");
+        return (float)$stmt->fetchColumn();
+    }
+
+    protected static function hydrate(array $row): Produit
     {
         $categorie = null;
         if (!empty($row['cat_id'])) {

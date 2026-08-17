@@ -6,7 +6,6 @@ use App\Controller\AuthController;
 use App\Controller\DetteController;
 use App\Controller\POSController;
 use App\Controller\SupplyController;
-use App\Model\Repository\CategorieRepository;
 use App\Model\Repository\ClientRepository;
 use App\Model\Repository\FournisseurRepository;
 use App\Model\Repository\ProduitRepository;
@@ -14,87 +13,80 @@ use App\Service\VenteService;
 
 class Router
 {
-    private array $routes = [];
+    private static array $routes = [];
 
-    public function registerDefaultRoutes(): void
+    public static function registerDefaultRoutes(): void
     {
-        $this->get('/login', AuthController::class, 'login');
-        $this->post('/login', AuthController::class, 'login');
-        $this->get('/logout', AuthController::class, 'logout');
-        $this->post('/logout', AuthController::class, 'logout');
+        self::get('/login', AuthController::class, 'login');
+        self::post('/login', AuthController::class, 'login');
+        self::get('/logout', AuthController::class, 'logout');
+        self::post('/logout', AuthController::class, 'logout');
 
-        $this->get('/', POSController::class, 'index');
-        $this->get('/pos', POSController::class, 'index');
-        $this->match(['GET', 'POST'], '/pos/ajouter', POSController::class, 'ajouterArticle');
-        $this->match(['GET', 'POST'], '/pos/quantite', POSController::class, 'modifierQuantite');
-        $this->match(['GET', 'POST'], '/pos/supprimer', POSController::class, 'supprimerArticle');
-        $this->match(['GET', 'POST'], '/pos/vider', POSController::class, 'viderPanier');
-        $this->match(['GET', 'POST'], '/pos/valider', POSController::class, 'validerVente');
+        self::get('/', POSController::class, 'index');
+        self::get('/pos', POSController::class, 'index');
+        self::match(['GET', 'POST'], '/pos/ajouter', POSController::class, 'ajouterArticle');
+        self::match(['GET', 'POST'], '/pos/quantite', POSController::class, 'modifierQuantite');
+        self::match(['GET', 'POST'], '/pos/supprimer', POSController::class, 'supprimerArticle');
+        self::match(['GET', 'POST'], '/pos/vider', POSController::class, 'viderPanier');
+        self::match(['GET', 'POST'], '/pos/valider', POSController::class, 'validerVente');
 
-        $this->get('/dettes', DetteController::class, 'index');
-        $this->match(['GET', 'POST'], '/dettes/rembourser', DetteController::class, 'rembourser');
-        $this->get('/dettes/{id}', DetteController::class, 'details');
+        self::get('/dettes', DetteController::class, 'index');
+        self::match(['GET', 'POST'], '/dettes/rembourser', DetteController::class, 'rembourser');
+        self::get('/dettes/{id}', DetteController::class, 'details');
 
-        $this->get('/supplies', SupplyController::class, 'index');
-        $this->get('/approvisionnements', SupplyController::class, 'index');
-        $this->match(['GET', 'POST'], '/supplies/receptionner', SupplyController::class, 'receptionner');
-        $this->match(['GET', 'POST'], '/approvisionnements/receptionner', SupplyController::class, 'receptionner');
-        $this->match(['GET', 'POST'], '/supplies/creer', SupplyController::class, 'creer');
-        $this->match(['GET', 'POST'], '/approvisionnements/creer', SupplyController::class, 'creer');
+        self::get('/supplies', SupplyController::class, 'index');
+        self::get('/approvisionnements', SupplyController::class, 'index');
+        self::match(['GET', 'POST'], '/supplies/receptionner', SupplyController::class, 'receptionner');
+        self::match(['GET', 'POST'], '/approvisionnements/receptionner', SupplyController::class, 'receptionner');
+        self::match(['GET', 'POST'], '/supplies/creer', SupplyController::class, 'creer');
+        self::match(['GET', 'POST'], '/approvisionnements/creer', SupplyController::class, 'creer');
 
-        $this->get('/dashboard', function() {
+        self::get('/dashboard', function() {
             SessionManager::start();
-            $venteService = new VenteService();
-            $statistiques = $venteService->getStatistiquesDuJour();
-            $ventesRecentes = $venteService->getVentesDuJour();
-            require __DIR__ . '/../views/dashboard/index.php';
+            $statistiques = VenteService::getStatistiquesDuJour();
+            $ventesRecentes = VenteService::getVentesDuJour();
+            require dirname(__DIR__) . '/views/dashboard/index.php';
         });
 
-        $this->get('/catalog', function() {
+        self::get('/catalog', function() {
             SessionManager::start();
-            $produitRepo = new ProduitRepository();
-            $clientRepo = new ClientRepository();
-            $fournisseurRepo = new FournisseurRepository();
-            $produits = $produitRepo->findAll();
-            $clients = $clientRepo->findAll();
-            $fournisseurs = $fournisseurRepo->findAll();
-            $valeurStock = $produitRepo->getValeurTotaleStock();
-            require __DIR__ . '/../views/catalogue/index.php';
+            $produits = ProduitRepository::findAll();
+            $clients = ClientRepository::findAll();
+            $fournisseurs = FournisseurRepository::findAll();
+            $valeurStock = ProduitRepository::getValeurTotaleStock();
+            require dirname(__DIR__) . '/views/catalogue/index.php';
         });
 
-        $this->get('/catalogue', function() {
+        self::get('/catalogue', function() {
             SessionManager::start();
-            $produitRepo = new ProduitRepository();
-            $clientRepo = new ClientRepository();
-            $fournisseurRepo = new FournisseurRepository();
-            $produits = $produitRepo->findAll();
-            $clients = $clientRepo->findAll();
-            $fournisseurs = $fournisseurRepo->findAll();
-            $valeurStock = $produitRepo->getValeurTotaleStock();
-            require __DIR__ . '/../views/catalogue/index.php';
+            $produits = ProduitRepository::findAll();
+            $clients = ClientRepository::findAll();
+            $fournisseurs = FournisseurRepository::findAll();
+            $valeurStock = ProduitRepository::getValeurTotaleStock();
+            require dirname(__DIR__) . '/views/catalogue/index.php';
         });
     }
 
-    public function get(string $path, string|callable $controller, ?string $action = null): void
+    public static function get(string $path, string|callable|array $controller, ?string $action = null): void
     {
-        $this->add('GET', $path, $controller, $action);
+        self::add('GET', $path, $controller, $action);
     }
 
-    public function post(string $path, string|callable $controller, ?string $action = null): void
+    public static function post(string $path, string|callable|array $controller, ?string $action = null): void
     {
-        $this->add('POST', $path, $controller, $action);
+        self::add('POST', $path, $controller, $action);
     }
 
-    public function match(array $methods, string $path, string|callable $controller, ?string $action = null): void
+    public static function match(array $methods, string $path, string|callable|array $controller, ?string $action = null): void
     {
         foreach ($methods as $method) {
-            $this->add($method, $path, $controller, $action);
+            self::add($method, $path, $controller, $action);
         }
     }
 
-    public function add(string $method, string $path, string|callable $controller, ?string $action = null): void
+    public static function add(string $method, string $path, string|callable|array $controller, ?string $action = null): void
     {
-        $this->routes[] = [
+        self::$routes[] = [
             'method' => strtoupper($method),
             'path' => rtrim($path, '/') ?: '/',
             'controller' => $controller,
@@ -102,12 +94,12 @@ class Router
         ];
     }
 
-    public function dispatch(?string $method = null, ?string $uri = null): mixed
+    public static function dispatch(?string $method = null, ?string $uri = null): mixed
     {
         $requestMethod = strtoupper($method ?? $_SERVER['REQUEST_METHOD'] ?? 'GET');
         $requestUri = rtrim(parse_url($uri ?? $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/') ?: '/';
 
-        foreach ($this->routes as $route) {
+        foreach (self::$routes as $route) {
             if ($route['method'] !== $requestMethod) {
                 continue;
             }
@@ -121,14 +113,21 @@ class Router
                 }
 
                 $controllerClass = $route['controller'];
-                if (!class_exists($controllerClass)) {
+                if (is_string($controllerClass) && !class_exists($controllerClass)) {
                     $controllerClass = 'App\\Controller\\' . $controllerClass;
                 }
 
-                $controller = new $controllerClass();
                 $action = $route['action'] ?? 'index';
 
-                return call_user_func_array([$controller, $action], $matches);
+                if (is_string($controllerClass) && method_exists($controllerClass, $action)) {
+                    return forward_static_call_array([$controllerClass, $action], $matches);
+                }
+
+                if (is_array($controllerClass)) {
+                    return forward_static_call_array($controllerClass, $matches);
+                }
+
+                return call_user_func_array([$controllerClass, $action], $matches);
             }
         }
 
@@ -137,5 +136,10 @@ class Router
         }
         echo "404 - Page non trouvée";
         return null;
+    }
+
+    public static function clear(): void
+    {
+        self::$routes = [];
     }
 }

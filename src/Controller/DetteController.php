@@ -9,14 +9,7 @@ use Throwable;
 
 class DetteController
 {
-    private DebtService $debtService;
-
-    public function __construct(?DebtService $debtService = null)
-    {
-        $this->debtService = $debtService ?? new DebtService();
-    }
-
-    public function index(): void
+    public static function index(): void
     {
         $currentUser = SessionManager::getUser();
         if (!$currentUser && SessionManager::isLoggedIn()) {
@@ -28,8 +21,8 @@ class DetteController
             );
         }
 
-        $dettes = $this->debtService->getAllDettes();
-        $stats = $this->debtService->getStatistiquesDettes();
+        $dettes = DebtService::getAllDettes();
+        $stats = DebtService::getStatistiquesDettes();
 
         $totalEncours = $stats['total_encours'];
         $totalRecouvrements = $stats['total_recouvrements'];
@@ -37,7 +30,7 @@ class DetteController
         require dirname(__DIR__) . '/views/dettes/index.php';
     }
 
-    public function rembourser(): void
+    public static function rembourser(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             if (!headers_sent()) {
@@ -53,7 +46,7 @@ class DetteController
         $userId = (int)SessionManager::get('user_id', 1);
 
         try {
-            $result = $this->debtService->enregistrerRemboursement(
+            $result = DebtService::enregistrerRemboursement(
                 $detteId,
                 $montant,
                 $modePaiementId,

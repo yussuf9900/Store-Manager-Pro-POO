@@ -4,11 +4,11 @@ namespace App\Model\Repository;
 
 interface RepositoryInterface
 {
-    public function findById(int $id): ?object;
+    public static function findById(int $id): ?object;
 
-    public function findAll(): array;
+    public static function findAll(): array;
 
-    public function delete(int $id): bool;
+    public static function delete(int $id): bool;
 
-    public function count(): int;
+    public static function count(): int;
 }

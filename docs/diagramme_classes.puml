@@ -12,246 +12,274 @@ skinparam class {
 
 title **Diagramme de Classes POO — StoreManager Pro (ERP / POS)**
 
-abstract class AbstractEntity {
-    #id: ?int
-    +getId(): ?int
-    +setId(?int id): self
+package "App\\Model\\Entity" {
+    abstract class AbstractEntity {
+        #id: ?int
+        +getId(): ?int
+        +setId(?int id): self
+    }
+
+    class Role extends AbstractEntity {
+        -code: string
+        -libelle: string
+        -description: ?string
+        +getCode(): string
+        +getLibelle(): string
+        +getDescription(): ?string
+    }
+
+    class StatutDette extends AbstractEntity {
+        -code: string
+        -libelle: string
+        +getCode(): string
+        +getLibelle(): string
+        +isSoldee(): bool
+        +isNonSoldee(): bool
+    }
+
+    class ModePaiement extends AbstractEntity {
+        -code: string
+        -libelle: string
+        -estActif: bool
+        +getCode(): string
+        +getLibelle(): string
+        +isEstActif(): bool
+    }
+
+    class StatutAppro extends AbstractEntity {
+        -code: string
+        -libelle: string
+        +getCode(): string
+        +getLibelle(): string
+    }
+
+    class Categorie extends AbstractEntity {
+        -code: string
+        -libelle: string
+        -description: ?string
+        +getCode(): string
+        +getLibelle(): string
+        +getDescription(): ?string
+    }
+
+    class User extends AbstractEntity {
+        -nom: string
+        -prenom: string
+        -email: string
+        -motDePasse: string
+        -role: ?Role
+        -actif: bool
+        -dateCreation: ?DateTime
+        +getNomComplet(): string
+        +getEmail(): string
+        +getRole(): ?Role
+        +hasRole(codeRole: string): bool
+        +verifierMotDePasse(plainPassword: string): bool
+        +setMotDePasse(plainPassword: string): void
+        +isActif(): bool
+    }
+
+    class Produit extends AbstractEntity {
+        -code: string
+        -libelle: string
+        -description: ?string
+        -prixAchat: float
+        -prixVente: float
+        -qteStock: int
+        -seuilAlerte: int
+        -categorie: ?Categorie
+        -dateCreation: ?DateTime
+        +getCode(): string
+        +getLibelle(): string
+        +getPrixAchat(): float
+        +getPrixVente(): float
+        +getQteStock(): int
+        +getSeuilAlerte(): int
+        +getCategorie(): ?Categorie
+        +estEnAlerte(): bool
+        +calculerMarge(): float
+        +calculerTauxMarge(): float
+        +retirerStock(qte: int): void
+        +ajouterStock(qte: int): void
+    }
+
+    class Client extends AbstractEntity {
+        -nom: string
+        -prenom: string
+        -telephone: string
+        -email: ?string
+        -adresse: ?string
+        -limiteCredit: float
+        -totalDettesActuelles: float
+        -dateCreation: ?DateTime
+        +getNomComplet(): string
+        +getLimiteCredit(): float
+        +getTotalDettesActuelles(): float
+        +getCreditDisponible(): float
+        +peutPrendreCredit(montant: float): bool
+        +ajouterDette(montant: float): void
+        +diminuerDette(montant: float): void
+    }
+
+    class Fournisseur extends AbstractEntity {
+        -nom: string
+        -contactNom: ?string
+        -telephone: string
+        -email: ?string
+        -adresse: ?string
+        -dateCreation: ?DateTime
+        +getNom(): string
+        +getContactNom(): ?string
+        +getTelephone(): string
+    }
+
+    class Vente extends AbstractEntity {
+        -numeroFacture: string
+        -dateVente: DateTime
+        -montantTotal: float
+        -montantPaye: float
+        -montantRestant: float
+        -modePaiement: ?ModePaiement
+        -statut: string
+        -client: ?Client
+        -vendeur: ?User
+        -lignes: LigneVente[*]
+        -dateCreation: ?DateTime
+        +getNumeroFacture(): string
+        +getMontantTotal(): float
+        +getMontantPaye(): float
+        +getMontantRestant(): float
+        +getLignes(): LigneVente[*]
+        +ajouterLigne(ligne: LigneVente): void
+        +calculerTotal(): float
+        +estACredit(): bool
+    }
+
+    class Commande extends Vente {
+        -dateLivraisonPrevue: ?DateTime
+        -statutLivraison: string
+        +getDateLivraisonPrevue(): ?DateTime
+        +getStatutLivraison(): string
+    }
+
+    class LigneVente extends AbstractEntity {
+        -vente: ?Vente
+        -produit: ?Produit
+        -quantite: int
+        -prixUnitaire: float
+        -remise: float
+        -sousTotal: float
+        +getProduit(): ?Produit
+        +getQuantite(): int
+        +getPrixUnitaire(): float
+        +getRemise(): float
+        +getSousTotal(): float
+    }
+
+    class Dette extends AbstractEntity {
+        -vente: ?Vente
+        -client: ?Client
+        -montantTotal: float
+        -montantRestant: float
+        -dateCreation: DateTime
+        -dateEcheance: ?DateTime
+        -statut: ?StatutDette
+        -paiements: Paiement[*]
+        +getMontantTotal(): float
+        +getMontantRestant(): float
+        +getMontantPaye(): float
+        +getPourcentageRembourse(): float
+        +getPaiements(): Paiement[*]
+        +estSoldee(): bool
+        +estEnRetard(): bool
+    }
+
+    class Paiement extends AbstractEntity {
+        -dette: ?Dette
+        -montant: float
+        -datePaiement: DateTime
+        -modePaiement: ?ModePaiement
+        -referencePaiement: ?string
+        -agent: ?User
+        +getDette(): ?Dette
+        +getMontant(): float
+        +getDatePaiement(): DateTime
+        +getModePaiement(): ?ModePaiement
+        +getAgent(): ?User
+    }
+
+    class Approvisionnement extends AbstractEntity {
+        -numeroBL: string
+        -dateAppro: DateTime
+        -montantTotal: float
+        -statut: ?StatutAppro
+        -fournisseur: ?Fournisseur
+        -agentStock: ?User
+        -lignes: LigneApprovisionnement[*]
+        +getNumeroBL(): string
+        +getMontantTotal(): float
+        +getStatut(): ?StatutAppro
+        +getFournisseur(): ?Fournisseur
+        +getAgentStock(): ?User
+        +getLignes(): LigneApprovisionnement[*]
+        +ajouterLigne(ligne: LigneApprovisionnement): void
+        +isRecu(): bool
+    }
+
+    class LigneApprovisionnement extends AbstractEntity {
+        -approvisionnement: ?Approvisionnement
+        -produit: ?Produit
+        -quantite: int
+        -prixAchatUnitaire: float
+        -sousTotal: float
+        +getProduit(): ?Produit
+        +getQuantite(): int
+        +getPrixAchatUnitaire(): float
+        +getSousTotal(): float
+    }
 }
 
-class Role extends AbstractEntity {
-    -code: string
-    -libelle: string
-    -description: ?string
-    +getCode(): string
-    +getLibelle(): string
-    +getDescription(): ?string
-}
+package "Couches Statiques (Core / Repositories / Services / Controllers)" {
+    class Database <<(S, #E2E8F0) Static>> {
+        {static} +getPDO(): PDO
+        {static} +beginTransaction(): bool
+        {static} +commit(): bool
+        {static} +rollBack(): bool
+    }
 
-class StatutDette extends AbstractEntity {
-    -code: string
-    -libelle: string
-    +getCode(): string
-    +getLibelle(): string
-    +isSoldee(): bool
-    +isNonSoldee(): bool
-}
+    class Router <<(S, #E2E8F0) Static>> {
+        {static} +registerDefaultRoutes(): void
+        {static} +get(path, controller, action): void
+        {static} +post(path, controller, action): void
+        {static} +dispatch(): mixed
+    }
 
-class ModePaiement extends AbstractEntity {
-    -code: string
-    -libelle: string
-    -estActif: bool
-    +getCode(): string
-    +getLibelle(): string
-    +isEstActif(): bool
-}
+    class SessionManager <<(S, #E2E8F0) Static>> {
+        {static} +start(): void
+        {static} +get(key): mixed
+        {static} +set(key, val): void
+        {static} +setFlash(type, msg): void
+    }
 
-class StatutAppro extends AbstractEntity {
-    -code: string
-    -libelle: string
-    +getCode(): string
-    +getLibelle(): string
-}
+    class ProduitRepository <<(S, #E2E8F0) Static>> {
+        {static} +findById(id): ?Produit
+        {static} +findAll(): Produit[*]
+        {static} +save(p: Produit): bool
+        {static} +updateStock(id, qte): bool
+    }
 
-class Categorie extends AbstractEntity {
-    -code: string
-    -libelle: string
-    -description: ?string
-    +getCode(): string
-    +getLibelle(): string
-    +getDescription(): ?string
-}
+    class VenteService <<(S, #E2E8F0) Static>> {
+        {static} +calculerTotauxPanier(articles): array
+        {static} +validerVente(userId, clientId, modeId, montantPaye, articles): Vente
+        {static} +getStatistiquesDuJour(): array
+    }
 
-class User extends AbstractEntity {
-    -nom: string
-    -prenom: string
-    -email: string
-    -motDePasse: string
-    -role: ?Role
-    -actif: bool
-    -dateCreation: ?DateTime
-    +getNomComplet(): string
-    +getEmail(): string
-    +getRole(): ?Role
-    +hasRole(codeRole: string): bool
-    +verifierMotDePasse(plainPassword: string): bool
-    +setMotDePasse(plainPassword: string): void
-    +isActif(): bool
-}
-
-class Produit extends AbstractEntity {
-    -code: string
-    -libelle: string
-    -description: ?string
-    -prixAchat: float
-    -prixVente: float
-    -qteStock: int
-    -seuilAlerte: int
-    -categorie: ?Categorie
-    -dateCreation: ?DateTime
-    +getCode(): string
-    +getLibelle(): string
-    +getPrixAchat(): float
-    +getPrixVente(): float
-    +getQteStock(): int
-    +getSeuilAlerte(): int
-    +getCategorie(): ?Categorie
-    +estEnAlerte(): bool
-    +calculerMarge(): float
-    +calculerTauxMarge(): float
-    +ajouterStock(quantite: int): void
-    +retirerStock(quantite: int): bool
-}
-
-class Client extends AbstractEntity {
-    -nom: string
-    -prenom: string
-    -telephone: string
-    -email: ?string
-    -adresse: ?string
-    -limiteCredit: float
-    -totalDettesActuelles: float
-    -dateCreation: ?DateTime
-    +getNomComplet(): string
-    +getTelephone(): string
-    +getEmail(): ?string
-    +getAdresse(): ?string
-    +getLimiteCredit(): float
-    +getTotalDettesActuelles(): float
-    +getCreditDisponible(): float
-    +peutPrendreCredit(montant: float): bool
-    +ajouterDette(montant: float): void
-    +diminuerDette(montant: float): void
-}
-
-class Fournisseur extends AbstractEntity {
-    -nom: string
-    -contactNom: ?string
-    -telephone: string
-    -email: ?string
-    -adresse: ?string
-    -dateCreation: ?DateTime
-    +getNom(): string
-    +getContactNom(): ?string
-    +getTelephone(): string
-    +getEmail(): ?string
-    +getAdresse(): ?string
-}
-
-class Vente extends AbstractEntity {
-    -numeroFacture: string
-    -dateVente: DateTime
-    -montantTotal: float
-    -montantPaye: float
-    -montantRestant: float
-    -modePaiement: ?ModePaiement
-    -statut: string
-    -client: ?Client
-    -vendeur: ?User
-    -lignes: LigneVente[*]
-    -dateCreation: ?DateTime
-    +getNumeroFacture(): string
-    +getDateVente(): DateTime
-    +getMontantTotal(): float
-    +getMontantPaye(): float
-    +getMontantRestant(): float
-    +getModePaiement(): ?ModePaiement
-    +getClient(): ?Client
-    +getVendeur(): ?User
-    +getLignes(): LigneVente[*]
-    +ajouterLigne(ligne: LigneVente): void
-    +calculerTotal(): float
-    +estACredit(): bool
-}
-
-class Commande extends Vente {
-}
-
-class LigneVente extends AbstractEntity {
-    -vente: ?Vente
-    -produit: ?Produit
-    -quantite: int
-    -prixUnitaire: float
-    -remise: float
-    -sousTotal: float
-    +getVente(): ?Vente
-    +getProduit(): ?Produit
-    +getQuantite(): int
-    +getPrixUnitaire(): float
-    +getRemise(): float
-    +calculerSousTotal(): float
-}
-
-class Dette extends AbstractEntity {
-    -vente: ?Vente
-    -client: ?Client
-    -montantTotal: float
-    -montantRestant: float
-    -dateCreation: DateTime
-    -dateEcheance: ?DateTime
-    -statut: ?StatutDette
-    -paiements: Paiement[*]
-    +getVente(): ?Vente
-    +getClient(): ?Client
-    +getMontantTotal(): float
-    +getMontantRestant(): float
-    +getDateCreation(): DateTime
-    +getDateEcheance(): ?DateTime
-    +getStatut(): ?StatutDette
-    +getPaiements(): Paiement[*]
-    +enregistrerPaiement(paiement: Paiement): void
-    +estSoldee(): bool
-    +estEnRetard(): bool
-}
-
-class Paiement extends AbstractEntity {
-    -dette: ?Dette
-    -montant: float
-    -datePaiement: DateTime
-    -modePaiement: ?ModePaiement
-    -referencePaiement: ?string
-    -agent: ?User
-    -dateCreation: ?DateTime
-    +getDette(): ?Dette
-    +getMontant(): float
-    +getDatePaiement(): DateTime
-    +getModePaiement(): ?ModePaiement
-    +getReferencePaiement(): ?string
-    +getAgent(): ?User
-}
-
-class Approvisionnement extends AbstractEntity {
-    -numeroBL: string
-    -dateAppro: DateTime
-    -montantTotal: float
-    -statut: ?StatutAppro
-    -fournisseur: ?Fournisseur
-    -agentStock: ?User
-    -lignes: LigneApprovisionnement[*]
-    -dateCreation: ?DateTime
-    +getNumeroBL(): string
-    +getDateAppro(): DateTime
-    +getMontantTotal(): float
-    +getStatut(): ?StatutAppro
-    +getFournisseur(): ?Fournisseur
-    +getAgentStock(): ?User
-    +getLignes(): LigneApprovisionnement[*]
-    +ajouterLigne(ligne: LigneApprovisionnement): void
-    +calculerTotal(): float
-    +isRecu(): bool
-    +isAnnule(): bool
-}
-
-class LigneApprovisionnement extends AbstractEntity {
-    -approvisionnement: ?Approvisionnement
-    -produit: ?Produit
-    -quantite: int
-    -prixAchatUnitaire: float
-    -sousTotal: float
-    +getApprovisionnement(): ?Approvisionnement
-    +getProduit(): ?Produit
-    +getQuantite(): int
-    +getPrixAchatUnitaire(): float
-    +getSousTotal(): float
+    class POSController <<(S, #E2E8F0) Static>> {
+        {static} +index(): void
+        {static} +ajouterArticle(): void
+        {static} +modifierQuantite(): void
+        {static} +validerVente(): void
+    }
 }
 
 User "1" --> "1" Role : possede

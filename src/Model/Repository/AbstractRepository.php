@@ -7,17 +7,10 @@ use PDO;
 
 abstract class AbstractRepository implements RepositoryInterface
 {
-    protected PDO $pdo;
-
-    public function __construct(?PDO $pdo = null)
+    protected static function getPDO(): PDO
     {
-        $this->pdo = $pdo ?? Database::getPDO();
+        return Database::getPDO();
     }
 
-    abstract protected function hydrate(array $row): object;
-
-    public function getPDO(): PDO
-    {
-        return $this->pdo;
-    }
+    abstract protected static function hydrate(array $row): object;
 }

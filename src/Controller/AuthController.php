@@ -8,14 +8,7 @@ use Throwable;
 
 class AuthController
 {
-    private AuthManager $authManager;
-
-    public function __construct(?AuthManager $authManager = null)
-    {
-        $this->authManager = $authManager ?? new AuthManager();
-    }
-
-    public function login(): void
+    public static function login(): void
     {
         SessionManager::start();
 
@@ -29,14 +22,14 @@ class AuthController
 
                 $user = null;
                 if (!empty($email) && !empty($password)) {
-                    $user = $this->authManager->authenticate($email, $password);
+                    $user = AuthManager::authenticate($email, $password);
                 } elseif (!empty($role)) {
-                    $user = $this->authManager->authenticateQuickProfile($role);
+                    $user = AuthManager::authenticateQuickProfile($role);
                 }
 
                 if ($user) {
                     SessionManager::setFlash('success', 'Bienvenue, ' . $user->getNomComplet() . ' !');
-                    $target = $this->authManager->getDefaultRouteForUser($user);
+                    $target = AuthManager::getDefaultRouteForUser($user);
                     if (!headers_sent()) {
                         header('Location: ' . $target);
                         exit;
@@ -55,9 +48,9 @@ class AuthController
             }
         }
 
-        if ($this->authManager->isAuthenticated()) {
-            $user = $this->authManager->getCurrentUser();
-            $target = $this->authManager->getDefaultRouteForUser($user);
+        if (AuthManager::isAuthenticated()) {
+            $user = AuthManager::getCurrentUser();
+            $target = AuthManager::getDefaultRouteForUser($user);
             if (!headers_sent()) {
                 header('Location: ' . $target);
                 exit;
@@ -67,12 +60,12 @@ class AuthController
         $flashSuccess = SessionManager::getFlash('success');
         $flashError = SessionManager::getFlash('error');
 
-        require __DIR__ . '/../views/auth/login.php';
+        require dirname(__DIR__) . '/views/auth/login.php';
     }
 
-    public function logout(): void
+    public static function logout(): void
     {
-        $this->authManager->logout();
+        AuthManager::logout();
         SessionManager::setFlash('success', 'Vous avez été déconnecté avec succès.');
 
         if (!headers_sent()) {
@@ -80,6 +73,6 @@ class AuthController
             exit;
         }
 
-        require __DIR__ . '/../views/auth/login.php';
+        require dirname(__DIR__) . '/views/auth/login.php';
     }
 }

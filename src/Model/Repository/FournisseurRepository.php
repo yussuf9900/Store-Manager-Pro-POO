@@ -8,38 +8,38 @@ use PDO;
 
 class FournisseurRepository extends AbstractRepository
 {
-    public function findById(int $id): ?Fournisseur
+    public static function findById(int $id): ?Fournisseur
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM fournisseurs WHERE id = :id LIMIT 1");
+        $stmt = self::getPDO()->prepare("SELECT * FROM fournisseurs WHERE id = :id LIMIT 1");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findByTelephone(string $telephone): ?Fournisseur
+    public static function findByTelephone(string $telephone): ?Fournisseur
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM fournisseurs WHERE telephone = :tel LIMIT 1");
+        $stmt = self::getPDO()->prepare("SELECT * FROM fournisseurs WHERE telephone = :tel LIMIT 1");
         $stmt->bindValue(':tel', trim($telephone), PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetch();
 
-        return $row ? $this->hydrate($row) : null;
+        return $row ? self::hydrate($row) : null;
     }
 
-    public function findAll(): array
+    public static function findAll(): array
     {
-        $stmt = $this->pdo->query("SELECT * FROM fournisseurs ORDER BY nom ASC");
+        $stmt = self::getPDO()->query("SELECT * FROM fournisseurs ORDER BY nom ASC");
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function search(string $term): array
+    public static function search(string $term): array
     {
         $cleanTerm = '%' . trim(strtolower($term)) . '%';
-        $stmt = $this->pdo->prepare(
+        $stmt = self::getPDO()->prepare(
             "SELECT * FROM fournisseurs 
              WHERE LOWER(nom) LIKE :term 
                 OR LOWER(COALESCE(contact_nom, '')) LIKE :term 
@@ -51,13 +51,14 @@ class FournisseurRepository extends AbstractRepository
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map([self::class, 'hydrate'], $rows);
     }
 
-    public function save(Fournisseur $fournisseur): bool
+    public static function save(Fournisseur $fournisseur): bool
     {
+        $pdo = self::getPDO();
         if ($fournisseur->getId() === null) {
-            $stmt = $this->pdo->prepare(
+            $stmt = $pdo->prepare(
                 "INSERT INTO fournisseurs (nom, contact_nom, telephone, email, adresse) 
                  VALUES (:nom, :contact_nom, :telephone, :email, :adresse)"
             );
@@ -69,12 +70,12 @@ class FournisseurRepository extends AbstractRepository
 
             $result = $stmt->execute();
             if ($result) {
-                $fournisseur->setId((int)$this->pdo->lastInsertId());
+                $fournisseur->setId((int)$pdo->lastInsertId());
             }
             return $result;
         }
 
-        $stmt = $this->pdo->prepare(
+        $stmt = $pdo->prepare(
             "UPDATE fournisseurs SET 
                 nom = :nom, 
                 contact_nom = :contact_nom, 
@@ -93,20 +94,20 @@ class FournisseurRepository extends AbstractRepository
         return $stmt->execute();
     }
 
-    public function delete(int $id): bool
+    public static function delete(int $id): bool
     {
-        $stmt = $this->pdo->prepare("DELETE FROM fournisseurs WHERE id = :id");
+        $stmt = self::getPDO()->prepare("DELETE FROM fournisseurs WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function count(): int
+    public static function count(): int
     {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM fournisseurs");
+        $stmt = self::getPDO()->query("SELECT COUNT(*) FROM fournisseurs");
         return (int)$stmt->fetchColumn();
     }
 
-    protected function hydrate(array $row): Fournisseur
+    protected static function hydrate(array $row): Fournisseur
     {
         $dateCreation = null;
         if (!empty($row['created_at'])) {
